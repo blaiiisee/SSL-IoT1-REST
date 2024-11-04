@@ -1,0 +1,84 @@
+openapi: 3.1.0
+info:
+  title: SSL IoT-1
+  description: OpenAPI Spec for interacting wth various sensors and actuators in Smart-iLab.
+  version: 1.0.0
+
+servers:
+  - url: 'http://localhost:80'
+
+paths:
+  /msr-2:
+    get:
+      description: Return all available MSR-2 sensor IDs
+      responses:
+        '200':
+          description: Successfully returned all available MSR-2 sensor IDs
+        '404':
+          description: MSR-2 Sensor IDs not found
+  /msr-2/{id}:
+    get:
+      description: Return data of specific MSR-2 Sensor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successfully returned most recent data of specific MSR-2 sensor
+        '404':
+          description: Unable to find specific MSR-2 sensor
+        '400':
+          description: Invalid Request
+  /air-1:
+    get:
+      description: Return all available AIR-1 sensor IDs
+      responses:
+        '200':
+          description: Successfully returned all available AIR-1 sensor IDs
+        '404':
+          description: AIR-1 Sensor IDs not found
+  /air-1/{id}:
+    get:
+      description: Return data of specific AIR-1 Sensor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successfully returned most recent data of specific AIR-1 sensor
+        '404':
+          description: Unable to find specific AIR-1 sensor
+        '400':
+          description: Invalid Request
+
+
