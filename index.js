@@ -17,7 +17,7 @@ const _ = require("lodash");
 const { v4: uuidv4, parse} = require("uuid");
 
 const corsOptions ={
-    origin:'http://localhost:80',
+    origin:'http://localhost:3000',
     credentials:true,            //access-control-allow-credentials:true
     optionSuccessStatus:200
 }
@@ -203,4 +203,4 @@ app.get("/air-1/:id", async (req,res)=>{
 // ------- END Define REST Endpoints ------ //
 
 // Server hosted at port 80
-app.listen(80, () => console.log("SSL IoT 1 Server Hosted at port 80"));
+app.listen(80, () => console.log("SSL IoT 1 Server Hosted at port 3000"));
