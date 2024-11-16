@@ -5,7 +5,7 @@ info:
   version: 1.0.0
 
 servers:
-  - url: 'http://localhost:3000'
+  - url: 'http://localhost:80'
 
 paths:
   /msr-2:
@@ -80,5 +80,39 @@ paths:
           description: Unable to find specific AIR-1 sensor
         '400':
           description: Invalid Request
-
-
+  /smart-plug-v2:
+    get:
+      description: Return all available smart-plug-v2 sensor IDs
+      responses:
+        '200':
+          description: Successfully returned all available smart-plug-v2 sensor IDs
+        '404':
+          description: smart-plug-v2 Sensor IDs not found
+  /smart-plug-v2/{id}:
+    get:
+      description: Return data of specific smart-plug-v2 Sensor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successfully returned most recent data of specific smart-plug-v2 sensor
+        '404':
+          description: Unable to find specific smart-plug-v2 sensor
+        '400':
+          description: Invalid Request

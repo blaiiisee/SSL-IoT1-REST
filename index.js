@@ -17,7 +17,7 @@ const _ = require("lodash");
 const { v4: uuidv4, parse} = require("uuid");
 
 const corsOptions ={
-    origin:'http://localhost:3000',
+    origin:'http://localhost:80',
     credentials:true,            //access-control-allow-credentials:true
     optionSuccessStatus:200
 }
@@ -27,7 +27,7 @@ app.use(cors(corsOptions));
 
 // Add middleware to support JSON
 app.use(express.json());
-// ------- END NodeJS/Express Setup ------ //
+// ------- END NodeJS/Express Setup ------ //     
 
 
 
@@ -200,7 +200,83 @@ app.get("/air-1/:id", async (req,res)=>{
     }
 })
 
+
+// (#9) "/smart-plug-v2" Return all available smart-plug-v2 sensor IDs
+app.get("/smart-plug-v2", async (req,res)=>{
+    client.query(`SELECT * FROM athom_smart_plug_v2`, (err, ids) => {
+        if(ids){
+            let arr_ids = [];
+            for (let id in ids.rows){
+                arr_ids.push(ids.rows[id]["sensor_id"]);
+            }
+            res.json(arr_ids);
+        }
+        else {
+            return res.status(404).json({ error: `Not Found: Sensor IDs not available` });
+        }
+        client.end;
+    })
+})
+
+
+// (#10) "/smart-plug-v2/:id?time_start&time_end" Return [most recent/historical] data of specific smart-plug-v2 sensor
+app.get("/smart-plug-v2/:id", async (req,res)=>{
+    const sensorID = req.params.id;
+    // Optional arguments; will be NULL if not provided
+    // Format: mm/dd/yy_hh:mm:ss (hh in 24-hour cycle)
+    const time_start = req.query.time_start;
+    const time_end = req.query.time_end;
+
+    // Step 1: Check if sensorID is available
+    let IDavailable = false;        // Temporary variable in checking availability of ID
+    client.query(`SELECT * FROM athom_smart_plug_v2`, (err, ids) => {
+        for (let id in ids.rows){
+            if (sensorID === ids.rows[id]["sensor_id"]){
+                IDavailable = true;     // sensorID is in the database
+            }
+        }
+
+        // Error 404: sensorID not in database
+        if (!IDavailable){
+            console.log(`ERROR: smart-plug-v2 Sensor with ID ${sensorID} unavailable`);
+            return res.status(404).json({ error: `Not Found: sensorID ${sensorID} not available` });
+            client.end;
+        }
+    })
+
+    // Step 2: Return data based on parameter values
+    // [A] If NO optional parameters
+    if (!time_start && !time_end){
+        // Order all data by descending date and time and get ONLY the most recent
+        client.query(`SELECT * FROM athom_smart_plug_v2_${sensorID} ORDER BY date DESC, time DESC LIMIT 1`, (err, data) => {
+            if (!err){
+                res.json(data.rows[0]);
+            } else {
+                console.log("ERROR: Getting most recent data from sensor-plug-v2 Sensor");
+            }
+            client.end;
+        })
+
+    } else if (time_start && time_end) {
+        // [B] With optional parameters time_start and time_end
+        let arr_time_start = time_start.split("_");
+        let arr_time_end  = time_end.split("_");
+        client.query(`SELECT * FROM athom_smart_plug_v2_${sensorID}
+        WHERE (date BETWEEN '${arr_time_start[0]}' AND '${arr_time_end[0]}')
+        AND (time BETWEEN '${arr_time_start[1]}' AND '${arr_time_end[1]}')`, (err, data) => {
+            res.json(data.rows);
+            client.end;
+        })
+
+    } else {
+        // [C] Error 400: Optional parameters are INCOMPLETE
+        console.log("ERROR: Incomplete parameters in smart-plug-v2 data request");
+        return res.status(400).json({ error: 'Invalid request: Missing arguments in request' });
+        client.end;
+    }
+})
+
 // ------- END Define REST Endpoints ------ //
 
 // Server hosted at port 80
-app.listen(80, () => console.log("SSL IoT 1 Server Hosted at port 3000"));
+app.listen(80, () => console.log("SSL IoT 1 Server Hosted at port 80"));
