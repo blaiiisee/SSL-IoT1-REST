@@ -44,6 +44,47 @@ paths:
           description: Unable to find specific MSR-2 sensor
         '400':
           description: Invalid Request
+  /msr-2/{id}/light:
+    post:
+      description: Set the LED light of MSR-2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: red
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: green
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: blue
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: brightness
+          in: query
+          required: true
+          schema:
+            type: float
+      responses:
+        '200':
+          description: Successfully returned most recent data of specific MSR-2 sensor
+        '404':
+          description: Unable to find specific MSR-2 sensor
+        '400':
+          description: Invalid Request
   /air-1:
     get:
       description: Return all available AIR-1 sensor IDs
