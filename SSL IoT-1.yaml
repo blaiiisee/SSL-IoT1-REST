@@ -1,24 +1,28 @@
 openapi: 3.1.0
 info:
   title: SSL IoT-1
-  description: OpenAPI Spec for interacting wth various sensors and actuators in Smart-iLab.
+  summary: OpenAPI Spec for interacting wth various sensors and actuators in Smart-iLab.
   version: 1.0.0
 
 servers:
   - url: 'http://localhost:80'
 
 paths:
-  /msr-2:
+  # Apollo AIR-1
+  /air-1:
     get:
-      description: Return all available MSR-2 sensor IDs
+      tags: ['Apollo AIR-1']
+      description: Return all available Apollo AIR-1 IDs
       responses:
         '200':
-          description: Successfully returned all available MSR-2 sensor IDs
+          description: Successfully returned all available Apollo AIR-1 IDs
         '404':
-          description: MSR-2 Sensor IDs not found
-  /msr-2/{id}:
+          description: Apollo AIR-1 IDs not found
+
+  /air-1/{id}:
     get:
-      description: Return data of specific MSR-2 Sensor
+      tags: ['Apollo AIR-1']
+      description: Return most recent/historical data of a specific Apollo AIR-1
       parameters:
         - name: id
           in: path
@@ -39,14 +43,207 @@ paths:
             format: date-time
       responses:
         '200':
-          description: Successfully returned most recent data of specific MSR-2 sensor
+          description: Successfully returned most recent/historical data of a specific Apollo AIR-1
         '404':
-          description: Unable to find specific MSR-2 sensor
+          description: Unable to find specific Apollo AIR-1
         '400':
           description: Invalid Request
+
+  /air-1/{id}/light:
+    post:
+      tags: ['Apollo AIR-1']
+      description: Set the LED light of a specific Apollo Air 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: red
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: green
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: blue
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: brightness
+          in: query
+          required: false
+          schema:
+            type: float
+      responses:
+        '200':
+          description: Successfully set the LED light of a specific Apollo AIR-1
+        '404':
+          description: Unable to find specific Apollo AIR-1
+        '400':
+          description: Invalid Request
+
+  # Apollo MSR-2
+  /msr-2:
+    get:
+      tags: ['Apollo MSR-2']
+      description: Return all available Apollo MSR-2 IDs
+      responses:
+        '200':
+          description: Successfully returned all available Apollo MSR-2 IDs
+        '404':
+          description: Apollo MSR-2 IDs not found
+
+  /msr-2/{id}:
+    get:
+      tags: ['Apollo MSR-2']
+      description: Return most recent/historical data of a specific Apollo MSR-2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successfully returned most recent/historical data of a specific Apollo MSR-2
+        '404':
+          description: Unable to find specific Apollo MSR-2
+        '400':
+          description: Invalid Request
+
   /msr-2/{id}/light:
     post:
-      description: Set the LED light of MSR-2
+      tags: ['Apollo MSR-2']
+      description: Set the LED light of a specific Apollo MSR-2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: red
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: green
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: blue
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: brightness
+          in: query
+          required: false
+          schema:
+            type: float
+      responses:
+        '200':
+          description: Successfully set the LED light of a specific Apollo MSR-2
+        '404':
+          description: Unable to find specific Apollo MSR-2
+        '400':
+          description: Invalid Request
+
+  /msr-2/{id}/buzzer:
+    post:
+      tags: ['Apollo MSR-2']
+      description: Play a rtttl string on the buzzer of a specific Apollo MSR-2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: mtttl_string
+          in: query
+          required: true
+          schema:
+            type: string'
+      responses:
+        '200':
+          description: Successfully played an rtttl string on the buzzer of a specific Apollo MSR-2
+        '404':
+          description: Unable to find specific Apollo MSR-2
+        '400':
+          description: Invalid Request
+
+  # Athom Smart Plug v2
+  /smart-plug-v2:
+    get:
+      tags: ['Athom Smart Plug v2']
+      description: Return all available Athom Smart Plug v2 IDs
+      responses:
+        '200':
+          description: Successfully returned all available Athom Smart Plug v2 IDs
+        '404':
+          description: Athom Smart Plug v2 IDs not found
+
+  /smart-plug-v2/{id}:
+    get:
+      tags: ['Athom Smart Plug v2']
+      description: Return most recent/historical data of a specific Athom Smart Plug v2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successfully returned most recent/historical data of a specific Athom Smart Plug v2
+        '404':
+          description: Unable to find specific Athom Smart Plug v2
+        '400':
+          description: Invalid Request
+
+  /smart-plug-v2/{id}/relay:
+    post:
+      tags: ['Athom Smart Plug v2']
+      description: Set the relay of a specific Athom Smart Plug v2
       parameters:
         - name: id
           in: path
@@ -58,44 +255,113 @@ paths:
           required: true
           schema:
             type: string
+      responses:
+        '200':
+          description: Successfully set the relay of a specific Athom Smart Plug v2
+        '404':
+          description: Unable to find specific Athom Smart Plug v2
+        '400':
+          description: Invalid Request
+
+  # AirGradient One
+  /ag-one:
+    get:
+      tags: ['AirGradient One']
+      description: Return all available AirGradient One IDs
+      responses:
+        '200':
+          description: Successfully returned all available AirGradient One IDs
+        '404':
+          description: AirGradient One IDs not found
+
+  /ag-one/{id}:
+    get:
+      tags: ['AirGradient One']
+      description: Return most recent/historical data of a specific AirGradient One
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successfully returned most recent/historical data of a specific AirGradient One
+        '404':
+          description: Unable to find specific AirGradient One
+        '400':
+          description: Invalid Request
+
+  /ag-one/{id}/light:
+    post:
+      tags: ['AirGradient One']
+      description: Set the LED strip of a specific AirGradient One
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
         - name: red
           in: query
-          required: true
+          required: false
           schema:
-            type: integer
+            type: float
         - name: green
           in: query
-          required: true
+          required: false
           schema:
-            type: integer
+            type: float
         - name: blue
           in: query
-          required: true
+          required: false
           schema:
-            type: integer
+            type: float
         - name: brightness
           in: query
-          required: true
+          required: false
           schema:
             type: float
       responses:
         '200':
-          description: Successfully returned most recent data of specific MSR-2 sensor
+          description: Successfully set the LED light of a specific AirGradient One
         '404':
-          description: Unable to find specific MSR-2 sensor
+          description: Unable to find specific AirGradient One
         '400':
           description: Invalid Request
-  /air-1:
+
+  # Zigbee2MQTT
+  /zigbee2mqtt:
     get:
-      description: Return all available AIR-1 sensor IDs
+      tags: ['Zigbee2MQTT']
+      description: Return all available Zigbee2MQTT device and group IDs
       responses:
         '200':
-          description: Successfully returned all available AIR-1 sensor IDs
+          description: Successfully returned all available Zigbee2MQTT device and group IDs
         '404':
-          description: AIR-1 Sensor IDs not found
-  /air-1/{id}:
+          description: Zigbee2MQTT device and group IDs not found
+
+  /zigbee2mqtt/{id}/get:
     get:
-      description: Return data of specific AIR-1 Sensor
+      tags: ['Zigbee2MQTT']
+      description: Return most recent/historical data of a specific Zigbee2MQTT device
       parameters:
         - name: id
           in: path
@@ -116,22 +382,60 @@ paths:
             format: date-time
       responses:
         '200':
-          description: Successfully returned most recent data of specific AIR-1 sensor
+          description: Successfully returned most recent/historical data of a specific Zigbee2MQTT device
         '404':
-          description: Unable to find specific AIR-1 sensor
+          description: Unable to find specific Zigbee2MQTT device
         '400':
           description: Invalid Request
-  /smart-plug-v2:
-    get:
-      description: Return all available smart-plug-v2 sensor IDs
+
+  /zigbee2mqtt/{id}/set:
+    post:
+      tags: ['Zigbee2MQTT']
+      description: Set the state, brightness, and/or color temperature of a light or group of lights
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: brightness
+          in: query
+          required: false
+          schema:
+            type: int
+        - name: color_temp
+          in: query
+          required: false
+          schema:
+            type: int
       responses:
         '200':
-          description: Successfully returned all available smart-plug-v2 sensor IDs
+          description: Successfully the state, brightness, and/or color temperature of a light or group of lights
         '404':
-          description: smart-plug-v2 Sensor IDs not found
-  /smart-plug-v2/{id}:
+          description: Unable to find specific light or group of lights
+        '400':
+          description: Invalid Request
+
+  # Sensibo Air Pro
+  /sensibo:
     get:
-      description: Return data of specific smart-plug-v2 Sensor
+      tags: ['Sensibo Air Pro']
+      description: Return all available Sensibo Air Pro IDs
+      responses:
+        '200':
+          description: Successfully returned all available Sensibo Air Pro IDs
+        '404':
+          description: Sensibo Air Pro IDs not found
+
+  /sensibo/{id}:
+    get:
+      tags: ['Sensibo Air Pro']
+      description: Return most recent/historical data of a specific Sensibo Air Pro
       parameters:
         - name: id
           in: path
@@ -152,8 +456,46 @@ paths:
             format: date-time
       responses:
         '200':
-          description: Successfully returned most recent data of specific smart-plug-v2 sensor
+          description: Successfully returned most recent/historical data of a specific Sensibo Air Pro
         '404':
-          description: Unable to find specific smart-plug-v2 sensor
+          description: Unable to find specific Sensibo Air Pro
+        '400':
+          description: Invalid Request
+
+  /sensibo/{id}/hvac:
+    post:
+      tags: ['Sensibo Air Pro']
+      description: Set the status of a specific Sensibo Air Pro's HVAC
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: hvac_mode
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: target_temperature
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: target_temp_high
+          in: query
+          required: false
+          schema:
+            type: float
+        - name: target_temp_low
+          in: query
+          required: false
+          schema:
+            type: float
+      responses:
+        '200':
+          description: Successfully set the status of a specific Sensibo Air Pro's HVAC
+        '404':
+          description: Unable to find specific Sensibo Air Pro
         '400':
           description: Invalid Request
