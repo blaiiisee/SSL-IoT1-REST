@@ -482,16 +482,6 @@ paths:
           required: false
           schema:
             type: float
-        - name: target_temp_high
-          in: query
-          required: false
-          schema:
-            type: float
-        - name: target_temp_low
-          in: query
-          required: false
-          schema:
-            type: float
       responses:
         '200':
           description: Successfully set the status of a specific Sensibo Air Pro's HVAC

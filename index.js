@@ -133,6 +133,7 @@ app.get("/air-1/:id", async (req, res) => {
                 res.json(data.rows[0]);
             }else{
                 console.log(`ERROR: Unable to get most recent data from Apollo AIR-1 with ID: ${device_id}`);
+                return res.status(200).send(`ERROR: Unable to get most recent data from Apollo AIR-1 with ID: ${device_id}`);
             }
             client.end;
         })
@@ -621,8 +622,17 @@ app.post("/zigbee2mqtt/:id/set", async (req, res) => {
     }
 
     // Step 3: POST the appropriate json file to the appropriate MQTT topic to set the state
-    let to_publish = `{` + `"state" : "${state}",` + `"brightness": ${brightness},` + `"color_temp": ${color_temp}` + '}';
-    mqttclient.publish(`${base_topic}/${entity_id}/set`, to_publish);
+    let to_publish = {};
+    if(state){
+        to_publish['state'] = state;
+    }
+    if(brightness){
+        to_publish['brightness'] = brightness;
+    }
+    if(color_temp){
+        to_publish['color_temp'] = color_temp;
+    }
+    mqttclient.publish(`${base_topic}/${entity_id}/set`, JSON.stringify(to_publish));
     return res.status(200).send(`State POST request to Zigbee2MQTT device with ID: ${entity_id} OK`);
 })
 
@@ -701,10 +711,8 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
     // Optional arguments; will be NULL if not provided
     // Possible values: "off", "heat", "cool", "heat_cool"
     const hvac_mode = req.query.hvac_mode
-    // Possible values: ?
+    // Possible values: float from 7-38
     const target_temperature = req.query.target_temperature
-    const target_temp_high = req.query.target_temp_high
-    const target_temp_low  = req.query.target_temp_low
 
     // Step 1: Check if an Sensibo Air Pro with ID: device_id is available
     let to_check = await ID_is_available("sensibo", entity_id); // Call ID checker function
@@ -716,12 +724,12 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
     // Step 2: POST based on parameter values
     if(hvac_mode === "off"){
         // [A] HVAC will be turned off
-        let parameters = {"entity_id":entity_id,"hvac_mode":hvac_mode};
+        let parameters = {"entity_id":entity_id, "hvac_mode":hvac_mode};
         fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_hvac_mode`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS})
         return res.status(200).send(`HVAC POST request to Sensibo Air Pro with ID: ${entity_id} OK`);
     }else if((hvac_mode === "heat" || hvac_mode === "cool") && target_temperature){
         // [B] HVAC will be set to heat or cool with given target temperature
-        let parameters = {"entity_id":entity_id,"temperature":target_temperature,"hvac_mode":hvac_mode};
+        let parameters = {"entity_id":entity_id, "temperature":target_temperature, "hvac_mode":hvac_mode};
         fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_temperature`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS})
         return res.status(200).send(`HVAC POST request to Sensibo Air Pro with ID: ${entity_id} OK`);
     }else{
@@ -735,8 +743,11 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
 
 
 // START Other Endpoints ------------------------------- //
+
 // (#1) "/tables" GET the mapping of sensors to tables
+
 // (#2) "/tables/{id}" GET all current sensor data for a specific tables
+
 // END Other Endpoints --------------------------------- //
 
 
