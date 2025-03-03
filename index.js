@@ -600,7 +600,7 @@ app.post("/zigbee2mqtt/:id/set", async (req, res) => {
     let base_topic = "";
     let result = await client.query(`SELECT * FROM zigbee2mqtt`);
     for (let row in result.rows) {
-        if (device_id !== result.rows[row]["id"]) {
+        if (entity_id !== result.rows[row]["id"]) {
             continue;
         }
         // device_id is found, store the base topic
@@ -609,8 +609,8 @@ app.post("/zigbee2mqtt/:id/set", async (req, res) => {
         break;
     }
     if(to_check === false){
-        console.log(`ERROR: Zigbee2MQTT device with ID: ${device_id} is not available`);
-        return res.status(404).json({error: `Not found: Zigbee2MQTT device with ID: ${device_id} is not available`});
+        console.log(`ERROR: Zigbee2MQTT device with ID: ${entity_id} is not available`);
+        return res.status(404).json({error: `Not found: Zigbee2MQTT device with ID: ${entity_id} is not available`});
     }
 
     // Step 2: Check if at least one optional parameter was given
@@ -621,7 +621,7 @@ app.post("/zigbee2mqtt/:id/set", async (req, res) => {
     }
 
     // Step 3: POST the appropriate json file to the appropriate MQTT topic to set the state
-    let to_publish = `{` + `"state" : "${state}",` + `"brightness": ${brightness}` + `"color_temp": ${color_temp}` + '}';
+    let to_publish = `{` + `"state" : "${state}",` + `"brightness": ${brightness},` + `"color_temp": ${color_temp}` + '}';
     mqttclient.publish(`${base_topic}/${entity_id}/set`, to_publish);
     return res.status(200).send(`State POST request to Zigbee2MQTT device with ID: ${entity_id} OK`);
 })
@@ -630,7 +630,7 @@ app.post("/zigbee2mqtt/:id/set", async (req, res) => {
 
 
 // START Sensibo Endpoints ----------------------------- //
-const HOME_ASSISTANT_URL_BASE = "http://10.158.71.11:8123/api/";
+const HOME_ASSISTANT_URL_BASE = "http://10.158.71.11:8123/api";
 const HOME_ASSISTANT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI3N2ViMDIzZmJjOWE0Yjc2YmYwMjE4YTFmOWY1ZDQwNyIsImlhdCI6MTc0MDExMjc4NSwiZXhwIjoyMDU1NDcyNzg1fQ.iNJpri8xnC_SvNbWGg1ygTWq6ywvhkuCYRJI2GpB0UI";
 const HOME_ASSISTANT_HEADERS = {"Authorization": `Bearer ${HOME_ASSISTANT_TOKEN}`, "content-type": "application/json"};
 
@@ -669,7 +669,7 @@ app.get("/sensibo/:id", async (req, res) => {
     // Step 2: Return data based on parameter values
     if(!time_start && !time_end){
         // [A] If NO optional parameter values were given
-        client.query(`SELECT * FROM sensibo_air_pro_${entity_id} ORDER BY timestamp DESC LIMIT 1`, (err, data) => {
+        client.query(`SELECT * FROM ${entity_id.replace(".","_")} ORDER BY timestamp DESC LIMIT 1`, (err, data) => {
             if(!err){
                 res.json(data.rows[0]);
             }else{
@@ -679,7 +679,7 @@ app.get("/sensibo/:id", async (req, res) => {
         })
     }else if(time_start && time_end){
         // [B] If optional parameter values for time_start and time_end were given
-        client.query(`SELECT * FROM sensibo_air_pro_${entity_id} WHERE (timestamp BETWEEN '${time_start}' AND '${time_end}')`, (err, data) => {
+        client.query(`SELECT * FROM ${entity_id.replace(".","_")} WHERE (timestamp BETWEEN '${time_start}' AND '${time_end}')`, (err, data) => {
             if(!err){
                 res.json(data.rows[0]);
             }else{
@@ -716,25 +716,16 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
     // Step 2: POST based on parameter values
     if(hvac_mode === "off"){
         // [A] HVAC will be turned off
-        let parameters = {"entity_id": entity_id, "hvac_mode": hvac_mode};
+        let parameters = {"entity_id":entity_id,"hvac_mode":hvac_mode};
         fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_hvac_mode`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS})
-            .then(res => res.json())
-            .then(data => {})
-        return res.status(200).send(`HVAC POST request to Sensibo Air Pro with ID: ${device_id} OK`);
+        return res.status(200).send(`HVAC POST request to Sensibo Air Pro with ID: ${entity_id} OK`);
     }else if((hvac_mode === "heat" || hvac_mode === "cool") && target_temperature){
         // [B] HVAC will be set to heat or cool with given target temperature
-        let parameters = {"entity_id": entity_id, "temperature": target_temperature, "hvac_mode": hvac_mode};
+        let parameters = {"entity_id":entity_id,"temperature":target_temperature,"hvac_mode":hvac_mode};
         fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_temperature`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS})
-            .then(res => res.json())
-            .then(data => {})
-        return res.status(200).send(`HVAC POST request to Sensibo Air Pro with ID: ${device_id} OK`);
-    }else if(hvac_mode === "heat_cool" && target_temp_high && target_temp_low){
-        // [C] HVAC will be set to heat/cool, with given maximum and minimum temperature
-        let parameters = {"entity_id": entity_id, "target_temp_high": target_temp_high, "target_temp_low": target_temp_low, "hvac_mode": hvac_mode};
-        fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_temperature`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS})
-        return res.status(200).send(`HVAC POST request to Sensibo Air Pro with ID: ${device_id} OK`);
+        return res.status(200).send(`HVAC POST request to Sensibo Air Pro with ID: ${entity_id} OK`);
     }else{
-        // [D] If optional parameter values are INCOMPLETE (Error 400)
+        // [C] If optional parameter values are INCOMPLETE (Error 400)
         console.log(`ERROR: Incomplete/Incorrect parameters in HVAC POST request for Sensibo Air Pro with ID: ${entity_id}`);
         return res.status(404).json({error: `Invalid request: Incomplete/Incorrect parameters in HVAC POST request for Sensibo Air Pro with ID: ${entity_id}`});
     }

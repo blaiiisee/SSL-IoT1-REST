@@ -188,7 +188,7 @@ paths:
             type: string
         - name: mtttl_string
           in: query
-          required: true
+          required: false
           schema:
             type: string'
       responses:
