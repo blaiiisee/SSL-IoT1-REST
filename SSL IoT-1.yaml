@@ -188,9 +188,9 @@ paths:
             type: string
         - name: mtttl_string
           in: query
-          required: false
+          required: true
           schema:
-            type: string'
+            type: string
       responses:
         '200':
           description: Successfully played an rtttl string on the buzzer of a specific Apollo MSR-2
@@ -408,7 +408,7 @@ paths:
           required: false
           schema:
             type: int
-        - name: color_temp
+        - name: color_temperature
           in: query
           required: false
           schema:
@@ -476,7 +476,7 @@ paths:
           in: query
           required: false
           schema:
-            type: float
+            type: string
         - name: target_temperature
           in: query
           required: false
@@ -489,3 +489,116 @@ paths:
           description: Unable to find specific Sensibo Air Pro
         '400':
           description: Invalid Request
+
+  # groups
+  /groups:
+    get:
+      tags: ['Groups']
+      description: Return all available group IDs
+      responses:
+        '200':
+          description: Successfully returned all available group IDs
+        '404':
+          description: Unable to get group IDs
+    post:
+      tags: ['Groups']
+      description: Create a new group of devices
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: apollo_air_1_ids
+          in: query
+          required: false
+          schema:
+            type: array
+        - name: apollo_msr_2_ids
+          in: query
+          required: false
+          schema:
+            type: array
+        - name: athom_smart_plug_v2_ids
+          in: query
+          required: false
+          schema:
+            type: array
+        - name: zigbee2mqtt_ids
+          in: query
+          required: false
+          schema:
+            type: array
+      responses:
+        '200':
+          description: Successfully created a new group of devices
+        '400':
+          description: Invalid request
+    put:
+      tags: ['Groups']
+      description: Change the members of a group
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: apollo_air_1_ids
+          in: query
+          required: false
+          schema:
+            type: array
+        - name: apollo_msr_2_ids
+          in: query
+          required: false
+          schema:
+            type: array
+        - name: athom_smart_plug_v2_ids
+          in: query
+          required: false
+          schema:
+            type: array
+        - name: zigbee2mqtt_ids
+          in: query
+          required: false
+          schema:
+            type: array
+      responses:
+        '200':
+          description: Successfully changed the members of a group
+        '404':
+          description: Group does not exist
+        '400':
+          description: Invalid request
+    delete:
+      tags: ['Groups']
+      description: Delete an existing group
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully deleted an existing group
+        '404':
+          description: Group does not exist
+
+  /groups/{id}:
+    get:
+      tags: ['Groups']
+      description: Return most recent data from all devices in a specific group
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully returned most recent data from all devices in a specific group
+        '404':
+          description: Unable to find specific group
+
+
