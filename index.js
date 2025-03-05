@@ -470,7 +470,7 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
             return res.status(404).json({error: `Bad Request: Invalid 'hvac_mode' parameter in POST request for Sensibo with ID: ${deviceID} | Given value: ${hvacMode} | Possible values: "off", "heat", "cool"`});
         }
         let parameters = {"entity_id": deviceID, "hvac_mode": hvacMode};
-        fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_hvac_mode`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS})
+        await fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_hvac_mode`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS})
     }
     if(targetTemperature){
         if(targetTemperature < 10 || targetTemperature > 35){
@@ -478,7 +478,7 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
             return res.status(404).json({error: `Bad Request: Invalid 'target_temperature' parameter in POST request for Sensibo with ID: ${deviceID} | Given value: ${targetTemperature} | Possible values: any value from 10 to 35`});
         }
         let parameters = {"entity_id": deviceID, "temperature": targetTemperature};
-        fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_temperature`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS});
+        await fetch(`${HOME_ASSISTANT_URL_BASE}/services/climate/set_temperature`, {method: 'POST', body: JSON.stringify(parameters), headers: HOME_ASSISTANT_HEADERS});
     }
 
     // Step 4: Return status 200 OK
