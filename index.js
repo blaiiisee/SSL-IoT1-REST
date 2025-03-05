@@ -2,7 +2,6 @@
 // Author: SSL - IoT 1
 // University of the Philippines - Diliman Electrical and Electronics Engineering Institute
 
-
 // ------- START NodeJS/Express Setup ------ //
 // Require Node.js File System
 const fs = require("fs/promises");
