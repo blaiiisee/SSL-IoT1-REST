@@ -588,6 +588,10 @@ app.post("/groups", async (req, res) => {
         client.end;
     })
     console.log(`Successfully crated a new group with ID: ${id}`);
+    if(apollo_air_1_ids){console.log(` - Apollo AIR-1's: ${apollo_air_1_ids}`);}
+    if(apollo_msr_2_ids){console.log(` - Apollo MSR-2's: ${apollo_msr_2_ids}`);}
+    if(athom_smart_plug_v2_ids){console.log(` - Athom Smart Plug v2's: ${athom_smart_plug_v2_ids}`);}
+    if(zigbee2mqtt_ids){console.log(` - Zigbee2MQTT's: ${zigbee2mqtt_ids}`);}
     return res.status(200).send(`Successfully crated a new group with ID: ${id}`);
 })
 
@@ -631,12 +635,26 @@ app.put("/groups", async (req, res) => {
                     console.log(`Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} does not exist`);
                     return res.status(404).json({error: `Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} does not exist`});
                 }
+                if(deviceNames[deviceIndex] === "Zigbee2MQTT"){
+                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[deviceIndex]}' AND type = 'device'`);
+                    if(!result.rowCount){
+                        console.log(`Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} cannot be added to a group`);
+                        return res.status(404).json({error: `Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} cannot be added to a group`});
+                    }
+                }
             }else{
                 for(let idIndex = 0; idIndex < deviceIDs[deviceIndex].length; idIndex++){
                     id_is_available = await ID_is_available(`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[deviceIndex][idIndex]);
                     if(!id_is_available){
                         console.log(`Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} does not exist`);
                         return res.status(404).json({error: `Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} does not exist`});
+                    }
+                    if(deviceNames[deviceIndex] === "Zigbee2MQTT"){
+                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[deviceIndex][idIndex]}' AND type = 'device'`);
+                        if(!result.rowCount){
+                            console.log(`Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} cannot be added to a group`);
+                            return res.status(404).json({error: `Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} cannot be added to a group`});
+                        }
                     }
                 }
             }
@@ -656,6 +674,10 @@ app.put("/groups", async (req, res) => {
         })
     }
     console.log(`Successfully edited members of group with ID: ${id}`);
+    if(apollo_air_1_ids){console.log(` - Apollo AIR-1's: ${apollo_air_1_ids}`);}
+    if(apollo_msr_2_ids){console.log(` - Apollo MSR-2's: ${apollo_msr_2_ids}`);}
+    if(athom_smart_plug_v2_ids){console.log(` - Athom Smart Plug v2's: ${athom_smart_plug_v2_ids}`);}
+    if(zigbee2mqtt_ids){console.log(` - Zigbee2MQTT's: ${zigbee2mqtt_ids}`);}
     return res.status(200).send(`Successfully edited members of group with ID: ${id}`);
 })
 
