@@ -2,7 +2,6 @@
 // Author: SSL - IoT 1
 // University of the Philippines - Diliman Electrical and Electronics Engineering Institute
 
-
 // ------- START NodeJS/Express Setup ------ //
 // Require Node.js File System
 const fs = require("fs/promises");
@@ -543,38 +542,38 @@ app.post("/groups", async (req, res) => {
     let deviceNames = ['Apollo AIR-1', 'Apollo MSR-2', 'Athom Smart Plug v2', 'Zigbee2MQTT'];
     let data = {"id":`'${id}'`};
     let id_is_available = true;
-    for(let deviceIndex = 0; deviceIndex < deviceIDs.length; deviceIndex++){
-        if(deviceIDs[deviceIndex]){
-            if(typeof(deviceIDs[deviceIndex]) === "string"){
-                id_is_available = await ID_is_available(`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[deviceIndex]);
+    for(let nameIndex = 0; nameIndex < deviceIDs.length; nameIndex++){
+        if(deviceIDs[nameIndex]){
+            if(typeof(deviceIDs[nameIndex]) === "string"){
+                id_is_available = await ID_is_available(`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[nameIndex]);
                 if(!id_is_available){
-                    console.log(`Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} does not exist`);
-                    return res.status(404).json({error: `Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} does not exist`});
+                    console.log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} does not exist`);
+                    return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} does not exist`});
                 }
-                if(deviceNames[deviceIndex] === "Zigbee2MQTT"){
-                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[deviceIndex]}' AND type = 'device'`);
+                if(deviceNames[nameIndex] === "Zigbee2MQTT"){
+                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex]}' AND type = 'device'`);
                     if(!result.rowCount){
-                        console.log(`Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} cannot be added to a group`);
-                        return res.status(404).json({error: `Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} cannot be added to a group`});
+                        console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} cannot be added to a group`);
+                        return res.status(404).json({error: `Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} cannot be added to a group`});
                     }
                 }
             }else{
-                for(let idIndex = 0; idIndex < deviceIDs[deviceIndex].length; idIndex++){
-                    id_is_available = await ID_is_available(`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[deviceIndex][idIndex]);
+                for(let idIndex = 0; idIndex < deviceIDs[nameIndex].length; idIndex++){
+                    id_is_available = await ID_is_available(`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[nameIndex][idIndex]);
                     if(!id_is_available){
-                        console.log(`Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} does not exist`);
-                        return res.status(404).json({error: `Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} does not exist`});
+                        console.log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`);
+                        return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`});
                     }
-                    if(deviceNames[deviceIndex] === "Zigbee2MQTT"){
-                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[deviceIndex][idIndex]}' AND type = 'device'`);
+                    if(deviceNames[nameIndex] === "Zigbee2MQTT"){
+                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex][idIndex]}' AND type = 'device'`);
                         if(!result.rowCount){
-                            console.log(`Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} cannot be added to a group`);
-                            return res.status(404).json({error: `Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} cannot be added to a group`});
+                            console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
+                            return res.status(404).json({error: `Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`});
                         }
                     }
                 }
             }
-            data[`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}_ids`] = `'{${deviceIDs[deviceIndex]}}'`;
+            data[`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}_ids`] = `'{${deviceIDs[nameIndex]}}'`;
         }
     }
 
@@ -622,43 +621,43 @@ app.put("/groups", async (req, res) => {
     let deviceNames = ['Apollo AIR-1', 'Apollo MSR-2', 'Athom Smart Plug v2', 'Zigbee2MQTT'];
     let data = {};
     let id_is_available = true;
-    for(let deviceIndex = 0; deviceIndex < deviceIDs.length; deviceIndex++){
-        if(deviceIDs[deviceIndex]){
-            if(typeof(deviceIDs[deviceIndex]) === "string"){
-                if(deviceIDs[deviceIndex] === "[REMOVE ALL MEMBERS]"){
-                    data[`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`] = 'NULL';
+    for(let nameIndex = 0; nameIndex < deviceIDs.length; nameIndex++){
+        if(deviceIDs[nameIndex]){
+            if(typeof(deviceIDs[nameIndex]) === "string"){
+                if(deviceIDs[nameIndex] === "[REMOVE ALL MEMBERS]"){
+                    data[`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`] = 'NULL';
                     continue;
                 }
 
-                id_is_available = await ID_is_available(`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[deviceIndex]);
+                id_is_available = await ID_is_available(`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[nameIndex]);
                 if(!id_is_available){
-                    console.log(`Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} does not exist`);
-                    return res.status(404).json({error: `Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} does not exist`});
+                    console.log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} does not exist`);
+                    return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} does not exist`});
                 }
-                if(deviceNames[deviceIndex] === "Zigbee2MQTT"){
-                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[deviceIndex]}' AND type = 'device'`);
+                if(deviceNames[nameIndex] === "Zigbee2MQTT"){
+                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex]}' AND type = 'device'`);
                     if(!result.rowCount){
-                        console.log(`Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} cannot be added to a group`);
-                        return res.status(404).json({error: `Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex]} cannot be added to a group`});
+                        console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} cannot be added to a group`);
+                        return res.status(404).json({error: `Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} cannot be added to a group`});
                     }
                 }
             }else{
-                for(let idIndex = 0; idIndex < deviceIDs[deviceIndex].length; idIndex++){
-                    id_is_available = await ID_is_available(`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[deviceIndex][idIndex]);
+                for(let idIndex = 0; idIndex < deviceIDs[nameIndex].length; idIndex++){
+                    id_is_available = await ID_is_available(`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[nameIndex][idIndex]);
                     if(!id_is_available){
-                        console.log(`Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} does not exist`);
-                        return res.status(404).json({error: `Not Found: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} does not exist`});
+                        console.log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`);
+                        return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`});
                     }
-                    if(deviceNames[deviceIndex] === "Zigbee2MQTT"){
-                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[deviceIndex][idIndex]}' AND type = 'device'`);
+                    if(deviceNames[nameIndex] === "Zigbee2MQTT"){
+                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex][idIndex]}' AND type = 'device'`);
                         if(!result.rowCount){
-                            console.log(`Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} cannot be added to a group`);
-                            return res.status(404).json({error: `Bad Request: ${deviceNames[deviceIndex]} with ID: ${deviceIDs[deviceIndex][idIndex]} cannot be added to a group`});
+                            console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
+                            return res.status(404).json({error: `Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`});
                         }
                     }
                 }
             }
-            data[`${deviceNames[deviceIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`] = `'{${deviceIDs[deviceIndex]}}'`;
+            data[`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`] = `'{${deviceIDs[nameIndex]}}'`;
         }
     }
 
