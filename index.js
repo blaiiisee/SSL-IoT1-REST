@@ -113,6 +113,30 @@ async function RETURN_user_name(api_key) {
     return result.rows[0]["user_name"];
 }
 
+async function SECURITY_CHECK(api_key, array) {
+    let to_verify = await KEY_is_available(api_key);
+    if(to_verify){
+        access_level = await RETURN_access_level(api_key);
+    }else{
+        console.log(`Not Found: API Key does not exist`);
+        return 2;
+    }
+    //CHECK IF ACCESS LEVEL MATCHES
+
+    let pass = 3;
+    for (let i = 0; i < array.length; i++) {
+        if(access_level === array[i]){
+            pass = 1; //check if access level matches one of the described values
+        }
+    }
+
+    if(!(pass === 1)){
+        console.log(`Forbidden Request: User does not have access to this route`);
+    }
+
+    return pass;
+}
+
 // ____ SECURITY END ____
 
 // ____ TRANSACTIONS START ____
@@ -310,26 +334,14 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
 
 // (#A) POST "/user/{user_name}" -- Create new user
 app.post("/users/:user_name", async (req,res)=>{
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
 
     const user_name = req.params.user_name;
     const access_level = req.query.access_level;
@@ -384,26 +396,14 @@ app.post("/users/:user_name", async (req,res)=>{
 
 // (#B) GET "/users" -- Return List of Users
 app.get("/users", async (req,res)=>{
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
 
     //RETURN LIST OF USERS
     client.query(`SELECT * FROM users`, (err, response) => {
@@ -428,26 +428,14 @@ app.get("/users", async (req,res)=>{
 
 // (#B) GET "/users/:user_name}" -- Return Data of Specific User (with query)
 app.get("/users/:user_name", async (req,res)=>{
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
 
     // Check if user is available
     const user_name = req.params.user_name;
@@ -477,26 +465,14 @@ app.get("/users/:user_name", async (req,res)=>{
 
 // (#C) PUT "/user" -- Edit Access Level of User
 app.put("/users/:user_name", async (req,res)=>{
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
 
     const user_name = req.params.user_name;
     const access_level = req.query.access_level;
@@ -553,26 +529,14 @@ app.put("/users/:user_name", async (req,res)=>{
 
 // (#D) DELETE "/user" -- Delete Specific User
 app.delete("/users/:user_name", async (req,res)=>{
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     const user_name = req.params.user_name;
 
     // Check if user is available
@@ -609,26 +573,14 @@ app.delete("/users/:user_name", async (req,res)=>{
 
 // (#E) "/transactions/?time_start&time_end" Return Last 20 Transactions by Default, Can give timestamp range
 app.get("/transactions", async (req,res)=>{
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
 
     // Optional arguments; will be NULL if not provided
     // Format: yyyy-mm-dd hh:mm:ss (hh in 24-hour cycle)
@@ -686,76 +638,40 @@ app.get("/transactions", async (req,res)=>{
 // START Apollo AIR-1 Endpoints ------------------------ //
 // (#1) "/air-1" GET all available Apollo AIR-1 IDs
 app.get("/air-1", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_ids(res, req, "Apollo AIR-1", specific_api_key, req.method, req.originalUrl);
 })
 
 // (#2) "/air-1/{id}" and "/air-1/{id}&options" GET the most recent/historical data of a specific Apollo AIR-1
 app.get("/air-1/:id", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_data(res, req, "Apollo AIR-1", specific_api_key, req.method, req.originalUrl);
 })
 
 // (#3) "/air-1/{id}/light" POST the state of the LED light of a specific Apollo AIR-1
 app.post("/air-1/:id/light", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return POST_light(res, req, "Apollo AIR-1", specific_api_key, req.method, req.originalUrl);
 })
 
@@ -765,101 +681,53 @@ app.post("/air-1/:id/light", async (req, res) => {
 // START Apollo MSR-2 Endpoints ------------------------ //
 // (#1) "/msr-2" GET all available Apollo MSR-2 IDs
 app.get("/msr-2", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_ids(res, req, "Apollo MSR-2", specific_api_key, req.method, req.originalUrl)
 })
 
 // (#2) "/msr-2/{id}" and "/msr-2/{id}&options" GET the most recent/historical data of a specific Apollo MSR-2
 app.get("/msr-2/:id", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_data(res, req, "Apollo MSR-2", specific_api_key, req.method, req.originalUrl);
 })
 
 // (#3) "/msr-2/{id}/light" POST the state of the LED light of a specific Apollo MSR-2
 app.post("/msr-2/:id/light", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return POST_light(res, req, "Apollo MSR-2", specific_api_key, req.method, req.originalUrl);
 })
 
 // (#4) "/msr-2/{id}/buzzer" POST the rtttl string to be played on the buzzer of a specific Apollo MSR-2
 app.post("/msr-2/:id/buzzer", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     const deviceID = req.params.id;
     // Optional argument; will be NULL if not provided
     const mtttl_string = req.query.mtttl_string;
@@ -895,76 +763,40 @@ app.post("/msr-2/:id/buzzer", async (req, res) => {
 
 // (#1) "/smart-plug-v2" GET all available Athom Smart Plug v2 IDs
 app.get("/smart-plug-v2", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_ids(res, req, "Athom Smart Plug v2", specific_api_key, req.method, req.originalUrl)
 })
 
 // (#2) "/smart-plug-v2/{id}" and "/smart-plug-v2/{id}&options" GET the most recent/historical data of specific Athom Smart Plug v2
 app.get("/smart-plug-v2/:id", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_data(res, req, "Athom Smart Plug v2", specific_api_key, req.method, req.originalUrl);
 })
 
 // (#3) "/smart-plug-v2/{id}/relay" POST relay of specific Athom Smart Plug v2
 app.post("/smart-plug-v2/:id/relay", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     const deviceID = req.params.id;
     // Optional argument; will be NULL if not provided
     const relayState = req.query.state;
@@ -1004,76 +836,40 @@ app.post("/smart-plug-v2/:id/relay", async (req, res) => {
 
 // (#1) "/ag-one" GET all available AirGradient One IDs
 app.get("/ag-one", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_ids(res, req, "AirGradient One", specific_api_key, req.method, req.originalUrl)
 })
 
 // (#2) "/ag-one/{id}" and "/ag-one/{id}&options" GET the most recent/historical data of a specific AirGradient One
 app.get("/ag-one/:id", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_data(res, req, "AirGradient One", specific_api_key, req.method, req.originalUrl);
 })
 
 // (#3) "/ag-one/{id}/light" POST the state of the LED strip of a specific AirGradient One
 app.post("/ag-one/:id/light", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return POST_light(res, req, "AirGradient One", specific_api_key, req.method, req.originalUrl);
 })
 
@@ -1084,51 +880,27 @@ app.post("/ag-one/:id/light", async (req, res) => {
 
 // (#1) "/zigbee2mqtt" GET all available Zigbee2MQTT device IDs and group IDs
 app.get("/zigbee2mqtt", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_ids(res, req, "Zigbee2MQTT", specific_api_key, req.method, req.originalUrl)
 })
 
 // (#2) "/zigbee2mqtt/{id}/get" GET the most recent/historical state of a specific Zigbee2MQTT device
 app.get("/zigbee2mqtt/:id/get", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
 
     // Step 0: Check if the ID belongs to a group
     let queryResult = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${req.params.id}'`);
@@ -1146,26 +918,14 @@ app.get("/zigbee2mqtt/:id/get", async (req, res) => {
 
 // (#3) "/zigbee2mqtt/{id}/set" POST the state of a specific Zigbee2MQTT device or group
 app.post("/zigbee2mqtt/:id/set", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     const entityID = req.params.id;
     // Optional arguments; will be NULL if not provided
     const lightState = req.query.state;
@@ -1237,76 +997,40 @@ const HOME_ASSISTANT_HEADERS = {"Authorization": `Bearer ${HOME_ASSISTANT_TOKEN}
 
 // (#1) "/sensibo" GET all available Sensibo Air Pro IDs
 app.get("/sensibo", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_ids(res, req, "Sensibo", specific_api_key, req.method, req.originalUrl)
 })
 
 // (#2) "/sensibo/{id}" and "/sensibo/{id}&options" GET the [most recent/historical] data of a specific Sensibo Air Pro
 app.get("/sensibo/:id", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     return GET_data(res, req, "Sensibo", specific_api_key, req.method, req.originalUrl);
 })
 
 // (#3) "/sensibo/{id}/hvac" POST the state of a Sensibo Air Pro's HVAC
 app.post("/sensibo/:id/hvac", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     const deviceID = req.params.id;
     // Optional arguments; will be NULL if not provided
     const hvacMode = req.query.hvac_mode
@@ -1362,26 +1086,14 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
 // (#1) "/groups" GET/POST/PUT/DELETE groups (mapping of devices to tables)
 // (1a) GET: Return all group IDs
 app.get("/groups", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     let queryResult = await client.query("SELECT * FROM groups");
     if(queryResult.rows.length){
         let data = {};
@@ -1412,26 +1124,14 @@ app.get("/groups", async (req, res) => {
 
 // (1b) POST: Add a new group. FOR HIGHEST PRIVILEGE ONLY
 app.post("/groups", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     const id = req.query.id;
     // Optional arguments; will be NULL if not provided
     apollo_air_1_ids = req.query.apollo_air_1_ids;
@@ -1512,26 +1212,15 @@ app.post("/groups", async (req, res) => {
 
 // (1c) PUT: Change the members of a group. FOR HIGHEST PRIVILEGE ONLY
 app.put("/groups", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
+
     const id = req.query.id;
     // Optional arguments; will be NULL if not provided
     apollo_air_1_ids = req.query.apollo_air_1_ids;
@@ -1626,26 +1315,15 @@ app.put("/groups", async (req, res) => {
 
 // (1d) DELETE: Delete a group. FOR HIGHEST PRIVILEGE ONLY
 app.delete("/groups", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
+
     const id = req.query.id;
 
     // Step 1: Check if a group with ID: id is available
@@ -1666,26 +1344,14 @@ app.delete("/groups", async (req, res) => {
 
 // (#2) "/groups/{id}" GET all current data from all devices in a specific group
 app.get("/groups/:id", async (req, res) => {
-    //______________ SECURITY CODE START ______________//
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-    //CHECK IF SPECIFIC_API_KEY EXISTS
-    let to_verify = await KEY_is_available(specific_api_key);
-    if(to_verify){
-        specific_access_level = await RETURN_access_level(specific_api_key);
-    }else{
-        console.log(`Not Found: API Key does not exist`);
+    let error_message = await SECURITY_CHECK(specific_api_key, [0,1,2]);
+    if(error_message === 2){
         return res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
-    }
-    //CHECK IF ACCESS LEVEL MATCHES
-    if(specific_access_level === 0 || specific_access_level === 1 || specific_access_level === 2){
-        //0 = ADMIN
-        //1 = READ ONLY
-        //2 = READ AND WRITE
-    }else{
-        console.log(`Forbidden Request: User does not have access to this route`);
+    }else if(error_message === 3){
         return res.status(403).json({ error: `Forbidden Request: User does not have access to this route`});
     }
-    //______________ SECURITY CODE END ______________//
+    // SECURITY END
     const id = req.params.id;
 
     // Step 1: Check if a group with ID: id is available. If id is available, get the group members
