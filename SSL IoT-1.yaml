@@ -4,15 +4,149 @@ info:
   summary: OpenAPI Spec for interacting wth various sensors and actuators in Smart-iLab.
   version: 1.0.0
 
+# ______ SECURITY FEATURES START ______
+# 1) Define the key name and location
+components:
+  securitySchemes:
+    ApiKeyAuth: # arbitrary name for the security scheme
+      type: apiKey
+      in: header # can be "header", "query" or "cookie"
+      name: X-API-KEY # name of the header, query parameter or cookie
+
+# 2) Apply the API key globally to all operations
+security:
+  - ApiKeyAuth: [] # use the same name as under securitySchemes
+
+# ______ SECURITY FEATURES END ______
+
+servers:
+  - url: 'http://localhost:80'
+
 servers:
   - url: 'http://localhost:80'
 
 paths:
+  # USER MANAGEMENT
+  /users/{user_name}:
+    post:
+      tags: ['User Management']
+      description: Create User with Access Level (0 - A ,1 - R,2 - R&W)
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: user_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: access_level
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully create user
+        '404':
+          description: Unsuccessfully create user
+    get:
+      tags: ['User Management']
+      security:
+        - ApiKeyAuth: [ ]
+      description: Return data of specific user
+      parameters:
+        - name: user_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully returned data of specific user
+        '404':
+          description: User data not found
+    put:
+      tags: ['User Management']
+      security:
+        - ApiKeyAuth: [ ]
+      description: Change Specific User's Access Level (0 - A ,1 - R,2 - R&W)
+      parameters:
+        - name: user_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: access_level
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully change user access level
+        '404':
+          description: Unsuccessfully change user access level
+    delete:
+      tags: ['User Management']
+      security:
+        - ApiKeyAuth: [ ]
+      description: Delete specific user
+      parameters:
+        - name: user_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully delete specific user
+        '404':
+          description: Unsuccessfully delete specific user
+  /users:
+    get:
+      tags: ['User Management']
+      security:
+        - ApiKeyAuth: [ ]
+      description: Return all available usernames
+      responses:
+        '200':
+          description: Successfully returned all available usernames
+        '404':
+          description: Usernames not found
+  # TRANSACTIONS
+  /transactions:
+    get:
+      tags: ['Transactions']
+      security:
+        - ApiKeyAuth: [ ]
+      description: Return last 10 transactions
+      parameters:
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successfully returned most recent transactions data
+        '404':
+          description: Unable to transactions data
+        '400':
+          description: Invalid Request
   # Apollo AIR-1
   /air-1:
     get:
       tags: ['Apollo AIR-1']
       description: Return all available Apollo AIR-1 IDs
+      security:
+        - ApiKeyAuth: [ ]
       responses:
         '200':
           description: Successfully returned all available Apollo AIR-1 IDs
@@ -23,6 +157,8 @@ paths:
     get:
       tags: ['Apollo AIR-1']
       description: Return most recent/historical data of a specific Apollo AIR-1
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -53,6 +189,8 @@ paths:
     post:
       tags: ['Apollo AIR-1']
       description: Set the LED light of a specific Apollo Air 1
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -97,6 +235,8 @@ paths:
     get:
       tags: ['Apollo MSR-2']
       description: Return all available Apollo MSR-2 IDs
+      security:
+        - ApiKeyAuth: [ ]
       responses:
         '200':
           description: Successfully returned all available Apollo MSR-2 IDs
@@ -107,6 +247,8 @@ paths:
     get:
       tags: ['Apollo MSR-2']
       description: Return most recent/historical data of a specific Apollo MSR-2
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -137,6 +279,8 @@ paths:
     post:
       tags: ['Apollo MSR-2']
       description: Set the LED light of a specific Apollo MSR-2
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -180,6 +324,8 @@ paths:
     post:
       tags: ['Apollo MSR-2']
       description: Play a rtttl string on the buzzer of a specific Apollo MSR-2
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -204,6 +350,8 @@ paths:
     get:
       tags: ['Athom Smart Plug v2']
       description: Return all available Athom Smart Plug v2 IDs
+      security:
+        - ApiKeyAuth: [ ]
       responses:
         '200':
           description: Successfully returned all available Athom Smart Plug v2 IDs
@@ -214,6 +362,8 @@ paths:
     get:
       tags: ['Athom Smart Plug v2']
       description: Return most recent/historical data of a specific Athom Smart Plug v2
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -244,6 +394,8 @@ paths:
     post:
       tags: ['Athom Smart Plug v2']
       description: Set the relay of a specific Athom Smart Plug v2
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -268,6 +420,8 @@ paths:
     get:
       tags: ['AirGradient One']
       description: Return all available AirGradient One IDs
+      security:
+        - ApiKeyAuth: [ ]
       responses:
         '200':
           description: Successfully returned all available AirGradient One IDs
@@ -278,6 +432,8 @@ paths:
     get:
       tags: ['AirGradient One']
       description: Return most recent/historical data of a specific AirGradient One
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -308,6 +464,8 @@ paths:
     post:
       tags: ['AirGradient One']
       description: Set the LED strip of a specific AirGradient One
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -352,6 +510,8 @@ paths:
     get:
       tags: ['Zigbee2MQTT']
       description: Return all available Zigbee2MQTT device and group IDs
+      security:
+        - ApiKeyAuth: [ ]
       responses:
         '200':
           description: Successfully returned all available Zigbee2MQTT device and group IDs
@@ -362,6 +522,8 @@ paths:
     get:
       tags: ['Zigbee2MQTT']
       description: Return most recent/historical data of a specific Zigbee2MQTT device
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -392,6 +554,8 @@ paths:
     post:
       tags: ['Zigbee2MQTT']
       description: Set the state, brightness, and/or color temperature of a light or group of lights
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -426,6 +590,8 @@ paths:
     get:
       tags: ['Sensibo Air Pro']
       description: Return all available Sensibo Air Pro IDs
+      security:
+        - ApiKeyAuth: [ ]
       responses:
         '200':
           description: Successfully returned all available Sensibo Air Pro IDs
@@ -436,6 +602,8 @@ paths:
     get:
       tags: ['Sensibo Air Pro']
       description: Return most recent/historical data of a specific Sensibo Air Pro
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -466,6 +634,8 @@ paths:
     post:
       tags: ['Sensibo Air Pro']
       description: Set the status of a specific Sensibo Air Pro's HVAC
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -495,6 +665,8 @@ paths:
     get:
       tags: ['Groups']
       description: Return all available group IDs
+      security:
+        - ApiKeyAuth: [ ]
       responses:
         '200':
           description: Successfully returned all available group IDs
@@ -503,6 +675,8 @@ paths:
     post:
       tags: ['Groups']
       description: Create a new group of devices
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: query
@@ -537,6 +711,8 @@ paths:
     put:
       tags: ['Groups']
       description: Change the members of a group
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: query
@@ -573,6 +749,8 @@ paths:
     delete:
       tags: ['Groups']
       description: Delete an existing group
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: query
@@ -589,6 +767,8 @@ paths:
     get:
       tags: ['Groups']
       description: Return most recent data from all devices in a specific group
+      security:
+        - ApiKeyAuth: [ ]
       parameters:
         - name: id
           in: path
