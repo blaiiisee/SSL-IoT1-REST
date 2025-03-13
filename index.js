@@ -104,15 +104,13 @@ async function KEY_is_available(api_key) {
 async function RETURN_access_level(api_key) {
     //check if api_key exists
     const result = await client.query(`SELECT * FROM users WHERE api_key = '${api_key}'`);
-    let specific_access_level = result.rows[0]["access_level"];
-    return specific_access_level;
+    return result.rows[0]["access_level"];
 }
 
 async function RETURN_user_name(api_key) {
     //check if api_key exists
     const result = await client.query(`SELECT * FROM users WHERE api_key = '${api_key}'`);
-    let specific_user_name = result.rows[0]["user_name"];
-    return specific_user_name;
+    return result.rows[0]["user_name"];
 }
 
 // ____ SECURITY END ____
@@ -128,8 +126,7 @@ async function getCurrentTimestamp() {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
 
-    const formattedTimestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    return formattedTimestamp;
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 async function UPDATE_transactions(api_key, type, uri, success) {
@@ -152,8 +149,6 @@ async function UPDATE_transactions(api_key, type, uri, success) {
         //END POSTGRES CONNECTION
         client.end;
     })
-
-    return;
 }
 
 // ____ TRANSACTIONS END ____
@@ -384,8 +379,6 @@ app.post("/users/:user_name", async (req,res)=>{
             client.end;
             return res.status(500).json({ error: `Database error occurred: An unexpected error occurred while creating the user.` });
         }
-        //END POSTGRES CONNECTION
-        client.end;
     })
 })
 
@@ -607,7 +600,6 @@ app.delete("/users/:user_name", async (req,res)=>{
             return res.status(500).json({ error: `Database error occurred: An unexpected error occurred.` });
         }
         //END POSTGRES CONNECTION
-        client.end;
     })
 })
 

@@ -22,9 +22,6 @@ security:
 servers:
   - url: 'http://localhost:80'
 
-servers:
-  - url: 'http://localhost:80'
-
 paths:
   # USER MANAGEMENT
   /users/{user_name}:
