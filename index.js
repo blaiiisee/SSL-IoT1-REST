@@ -168,8 +168,6 @@ async function UPDATE_transactions(api_key, type, uri, success) {
             console.log("ERROR: Unsuccessfully logged transaction");
             return;
         }
-        //END POSTGRES CONNECTION
-        client.end;
     })
 }
 
@@ -516,8 +514,6 @@ app.put("/users/:user_name", async (req,res)=>{
             client.end;
             return res.status(500).json({ error: `Database error occurred: An unexpected error occurred.` });
         }
-        //END POSTGRES CONNECTION
-        client.end;
     })
 })
 
