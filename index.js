@@ -162,11 +162,10 @@ async function UPDATE_transactions(api_key, type, uri, success) {
     client.query(`INSERT INTO transactions (timestamp, user_name, type, uri, success) VALUES ('${await getCurrentTimestamp()}','${await RETURN_user_name(api_key)}', '${type}','${uri}','${success}')`, (err, response) => {
         if (!err){
             //SUCCESS
-            return;
+            console.log("Successfully logged transaction");
         } else {
             //ERROR PGADMIN
             console.log("ERROR: Unsuccessfully logged transaction");
-            return;
         }
     })
 }
@@ -223,7 +222,7 @@ async function GET_data(res, req, deviceName, api_key, type, uri){
     if(!timeStart && !timeEnd){
         // [A] If NO optional parameter values were given
         client.query(`SELECT * FROM ${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}_${deviceID.replaceAll(".","_")} ORDER BY timestamp DESC LIMIT 1`, (err, data) => {
-            if(err || data.rowCount === 0){
+            if(err){
                 console.log(`Internal Server Error: Unable to get most recent data from ${deviceName} with ID: ${deviceID}`);
                 return res.status(500).send(`Internal Server Error: Unable to get most recent data from ${deviceName} with ID: ${deviceID}`);
             }
@@ -234,8 +233,8 @@ async function GET_data(res, req, deviceName, api_key, type, uri){
         })
     }else if(timeStart && timeEnd){
         // [B] If optional parameter values for timeStart and timeEnd were given
-        client.query(`SELECT * FROM ${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID} WHERE (timestamp BETWEEN '${timeStart}' AND '${timeEnd}')`, (err, data) => {
-            if(err || data.rowCount === 0){
+        client.query(`SELECT * FROM ${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}_${deviceID.replaceAll(".","_")} WHERE (timestamp BETWEEN '${timeStart}' AND '${timeEnd}')`, (err, data) => {
+            if(err){
                 console.log(`Bad Request: Invalid arguments in historical data GET request for ${deviceName} with ID: ${deviceID}`);
                 return res.status(400).json({error: `Bad Request: Invalid arguments in historical data GET request for ${deviceName} with ID: ${deviceID}`});
             }
@@ -1068,7 +1067,6 @@ app.put("/groups", async (req, res) => {
         return;
     }
 
-
     const id = req.query.id;
     // Optional arguments; will be NULL if not provided
     apollo_air_1_ids = req.query.apollo_air_1_ids;
@@ -1099,7 +1097,7 @@ app.put("/groups", async (req, res) => {
     for(let nameIndex = 0; nameIndex < deviceIDs.length; nameIndex++){
         if(deviceIDs[nameIndex]){
             if(typeof(deviceIDs[nameIndex]) === "string"){
-                if(deviceIDs[nameIndex] === "[REMOVE ALL MEMBERS]"){
+                if(deviceIDs[nameIndex] === "[REMOVE MEMBERS]"){
                     data[`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`] = 'NULL';
                     continue;
                 }
