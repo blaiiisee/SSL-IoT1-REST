@@ -23,6 +23,24 @@ servers:
   - url: 'http://localhost:80'
 
 paths:
+  # DIGITAL TWIN
+  /access/{api_key}:
+    get:
+      tags: [ 'Digital Twin' ]
+      description: Return Access Level of API Key (-1 - X, 0 - A ,1 - R,2 - R&W)
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: api_key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully return access level
+        '404':
+          description: Unsuccessfully return access level
   # USER MANAGEMENT
   /users/{user_name}:
     post:

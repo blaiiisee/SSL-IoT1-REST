@@ -333,9 +333,30 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
 
 // ---- END Standardized Function Calls ---- //
 
-
-
 // ----------- START Define REST Endpoints ---------- //
+
+// START Digital Twin Endpoints -------------------------- //
+
+app.get("/access/:api_key", async (req,res)=>{
+    let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
+    if(await SECURITY_CHECK(res, req, specific_api_key, [0]) === false){ //______ SECURITY CONDITIONAL
+        return;
+    }
+
+    console.log(`SUCCESSFULLY return access level`);
+    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
+
+    const api_key = req.params.api_key;
+    let to_verify = await KEY_is_available(api_key);
+    if(to_verify){ // check if API Key is valid
+        let access_level = await RETURN_access_level(api_key);
+        res.json(access_level);
+    }else{
+        res.json(-1); // RETURN -1 if API Key is NOT Valid
+    }
+})
+
+// END Digital Twin Endpoints -------------------------- //
 
 // START User Management Endpoints -------------------------- //
 
