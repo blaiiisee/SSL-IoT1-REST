@@ -251,6 +251,58 @@ async function GET_data(res, req, deviceName, api_key, type, uri){
     }
 }
 
+// GET average of historical data
+async function GET_avg(res, req, deviceName, api_key, type, uri){
+    if(await SECURITY_CHECK(res, req, api_key, [0,1,2]) === false){ //______ SECURITY CONDITIONAL
+        return;
+    }
+
+    const deviceID = req.params.id;
+    const specData = req.query.sensData;
+    // Optional arguments; will be NULL if not provided
+    const timeStart = req.query.time_start;
+    const timeEnd   = req.query.time_end;
+
+    // Step 1: Check if an deviceName with ID: deviceID is available
+    if(await ID_is_available(`${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}`, deviceID) === false){
+        console.log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
+        UPDATE_transactions(api_key, type, uri, false);
+        return res.status(404).json({error: `Not Found: ${deviceName} with ID: ${deviceID} does not exist`});
+    }
+
+    // Step 2: Return data based on parameter values
+    if(!timeStart && !timeEnd && specData){
+        // [A] If NO optional parameter values were given
+        client.query(`SELECT average(time_weight('Linear', timestamp, ${specData})) as time_weighted_average FROM ${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}_${deviceID}`, (err, data) => {
+            if(err || data.rowCount === 0){
+                console.log(`Internal Server Error: Unable to get historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
+                return res.status(500).send(`Internal Server Error: Unable to get historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
+            }
+            console.log(`Successfully returned historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
+            UPDATE_transactions(api_key, type, uri, true);
+            res.json(data.rows[0]);
+            client.end;
+        })
+    }else if(timeStart && timeEnd && specData){
+        // [B] If optional parameter values for timeStart and timeEnd were given
+        client.query(`SELECT average(time_weight('Linear', timestamp, ${specData})) as time_weighted_average FROM ${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}_${deviceID} WHERE (timestamp BETWEEN '${timeStart}' and '${timeEnd}')`, (err, data) => {
+            if(err || data.rowCount === 0){
+                console.log(`Bad Request: Invalid arguments in average historical ${specData} data GET request for ${deviceName} with ID: ${deviceID}`);
+                return res.status(400).json({error: `Bad Request: Invalid arguments in average historical ${specData} data GET request for ${deviceName} with ID: ${deviceID}`});
+            }
+            console.log(`Successfully returned average historical ${specData} data (${timeStart} to ${timeEnd}) from ${deviceName} with ID: ${deviceID}`);
+            UPDATE_transactions(api_key, type, uri, true);
+            res.json(data.rows);
+            client.end;
+        })
+    }else{
+        // [C] If optional parameter values are INCOMPLETE (Error 400)
+        console.log(`Bad Request: Incomplete parameters in GET average historical data request for ${deviceName} with ID: ${deviceID}`);
+        UPDATE_transactions(api_key, type, uri, false);
+        return res.status(400).json({error: `Bad Request: Incomplete parameters in GET average historical data request for ${deviceName} with ID: ${deviceID}`});
+    }
+}
+
 // POST LED light/strip
 async function POST_light(res, req, deviceName, api_key, type, uri){
     if(await SECURITY_CHECK(res, req, api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
@@ -654,6 +706,11 @@ app.post("/air-1/:id/light", async (req, res) => {
     return POST_light(res, req, "Apollo AIR-1", req.header("x-api-key"), req.method, req.originalUrl);
 })
 
+// (#4) "/air-1/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Apollo AIR-1
+app.get("/air-1/:id/avg", async (req, res) => {
+    return GET_avg(res, req, "Apollo AIR-1", req.header("x-api-key"), req.method, req.originalUrl);
+})
+
 // END Apollo AIR-1 Endpoints -------------------------- //
 
 
@@ -706,6 +763,11 @@ app.post("/msr-2/:id/buzzer", async (req, res) => {
     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
     //mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish));
     return res.status(200).send(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
+})
+
+// (#5) "/msr-2/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Apollo MSR-2
+app.get("/msr-2/:id/avg", async (req, res) => {
+    return GET_avg(res, req, "Apollo MSR-2", req.header("x-api-key"), req.method, req.originalUrl);
 })
 
 // END Apollo MSR-2 Endpoints -------------------------- //
@@ -762,6 +824,11 @@ app.post("/smart-plug-v2/:id/relay", async (req, res) => {
     return res.status(200).send(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
 })
 
+// (#4) "/smart-plug-v2/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Athom Smart Plug v2
+app.get("/smart-plug-v2/:id/avg", async (req, res) => {
+    return GET_avg(res, req, "Athom Smart Plug v2", req.header("x-api-key"), req.method, req.originalUrl);
+})
+
 // END Athom Smart Plug v2 Endpoints ------------------- //
 
 
@@ -780,6 +847,11 @@ app.get("/ag-one/:id", async (req, res) => {
 // (#3) "/ag-one/{id}/light" POST the state of the LED strip of a specific AirGradient One
 app.post("/ag-one/:id/light", async (req, res) => {
     return POST_light(res, req, "AirGradient One", req.header("x-api-key"), req.method, req.originalUrl);
+})
+
+// (#4) "/ag-one/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Athom Smart Plug v2
+app.get("/ag-one/:id/avg", async (req, res) => {
+    return GET_avg(res, req, "AirGradient One", req.header("x-api-key"), req.method, req.originalUrl);
 })
 
 // END AirGradient One Endpoints ----------------------- //
