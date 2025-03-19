@@ -336,8 +336,7 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
 // ----------- START Define REST Endpoints ---------- //
 
 // START Digital Twin Endpoints -------------------------- //
-
-app.get("/access/:api_key", async (req,res)=>{
+app.get("/access/:api_key", async (req,res)=>{ // return access_level of api_key
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
     if(await SECURITY_CHECK(res, req, specific_api_key, [0]) === false){ //______ SECURITY CONDITIONAL
         return;
