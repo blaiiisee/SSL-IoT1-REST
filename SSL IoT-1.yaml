@@ -245,6 +245,43 @@ paths:
         '400':
           description: Invalid Request
 
+ /air-1/{id}/avg:
+    get:
+      tags: ['Apollo AIR-1']
+      description: Return average historical data of a specific sensor data of a specific Apollo AIR-1
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: sensData
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully returned  average historical data of a specific sensor data of a specific Apollo AIR-1
+        '404':
+          description: Unable to find specific Apollo AIR-1
+        '400':
+          description: Invalid Request
+          
   # Apollo MSR-2
   /msr-2:
     get:
@@ -360,6 +397,43 @@ paths:
         '400':
           description: Invalid Request
 
+ /msr-2/{id}/avg:
+    get:
+      tags: ['Apollo MSR-2']
+      description: Return average historical data of a specific sensor data of a specific Apollo MSR-2
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: sensData
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully returned  average historical data of a specific sensor data of a specific Apollo MSR-2
+        '404':
+          description: Unable to find specific Apollo MSR-2
+        '400':
+          description: Invalid Request
+          
   # Athom Smart Plug v2
   /smart-plug-v2:
     get:
@@ -425,6 +499,43 @@ paths:
       responses:
         '200':
           description: Successfully set the relay of a specific Athom Smart Plug v2
+        '404':
+          description: Unable to find specific Athom Smart Plug v2
+        '400':
+          description: Invalid Request
+
+  /smart-plug-v2/{id}/avg:
+    get:
+      tags: ['Athom Smart Plug V2']
+      description: Return average historical data of a specific sensor data of a specific Athom Smart Plug v2
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: sensData
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully returned  average historical data of a specific sensor data of a specific Athom Smart Plug v2
         '404':
           description: Unable to find specific Athom Smart Plug v2
         '400':
@@ -520,6 +631,43 @@ paths:
         '400':
           description: Invalid Request
 
+/ag-one/{id}/avg:
+    get:
+      tags: ['AirGradient One']
+      description: Return average historical data of a specific sensor data of a specific AirGradient One
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: sensData
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully returned  average historical data of a specific sensor data of a specific AirGradient One
+        '404':
+          description: Unable to find specific AirGradient One
+        '400':
+          description: Invalid Request
+          
   # Zigbee2MQTT
   /zigbee2mqtt:
     get:
