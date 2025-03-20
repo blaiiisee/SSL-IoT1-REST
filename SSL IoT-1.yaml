@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SSL IoT-1
-  summary: OpenAPI Spec for interacting wth various sensors and actuators in Smart-iLab.
+  summary: OpenAPI Spec for interacting wth various sensors and actuators in Smart-iLAB.
   version: 1.0.0
 
 # ______ SECURITY FEATURES START ______
@@ -20,7 +20,7 @@ security:
 # ______ SECURITY FEATURES END ______
 
 servers:
-  - url: 'http://localhost:80'
+  - url: 'http://10.158.66.30:81'
 
 paths:
   # DIGITAL TWIN
@@ -245,7 +245,7 @@ paths:
         '400':
           description: Invalid Request
 
- /air-1/{id}/avg:
+  /air-1/{id}/avg:
     get:
       tags: ['Apollo AIR-1']
       description: Return average historical data of a specific sensor data of a specific Apollo AIR-1
@@ -397,7 +397,7 @@ paths:
         '400':
           description: Invalid Request
 
- /msr-2/{id}/avg:
+  /msr-2/{id}/avg:
     get:
       tags: ['Apollo MSR-2']
       description: Return average historical data of a specific sensor data of a specific Apollo MSR-2
@@ -631,7 +631,7 @@ paths:
         '400':
           description: Invalid Request
 
-/ag-one/{id}/avg:
+  /ag-one/{id}/avg:
     get:
       tags: ['AirGradient One']
       description: Return average historical data of a specific sensor data of a specific AirGradient One

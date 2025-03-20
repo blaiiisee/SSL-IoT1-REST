@@ -761,7 +761,7 @@ app.post("/msr-2/:id/buzzer", async (req, res) => {
     console.log(` - MQTT Topic: apollo_msr_2_${deviceID}/buzzer`);
     console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-    //mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish));
+    mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish));
     return res.status(200).send(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
 })
 
