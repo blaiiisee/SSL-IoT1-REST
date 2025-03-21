@@ -17,15 +17,9 @@ const { v4: uuidv4, parse} = require("uuid");
 const mqtt = require("mqtt");
 const url = 'mqtt://10.158.66.30:1883';
 
-const corsOptions ={
-    origin:'http://localhost:80',
-    credentials:true,            //access-control-allow-credentials:true
-    optionSuccessStatus:200
-}
-
 // Server Start-up
 const app = express();
-app.use(cors(corsOptions));
+app.use(cors({origin: '*'}));
 
 // Add middleware to support JSON
 app.use(express.json());
