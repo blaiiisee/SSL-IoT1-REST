@@ -859,12 +859,11 @@ app.get("/zigbee2mqtt", async (req, res) => {
 })
 
 // (#2) "/zigbee2mqtt/{id}/get" GET the most recent/historical state of a specific Zigbee2MQTT device
-app.get("/zigbee2mqtt/:id/get", async (req, res) => {
+app.get("/zigbee2mqtt/:id", async (req, res) => {
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
     if(await SECURITY_CHECK(res, req, specific_api_key, [0,1,2]) === false){ //______ SECURITY CONDITIONAL
         return;
     }
-
 
     // Step 0: Check if the ID belongs to a group
     let queryResult = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${req.params.id}'`);
@@ -872,7 +871,7 @@ app.get("/zigbee2mqtt/:id/get", async (req, res) => {
         console.log(`Not found: Zigbee2MQTT with ID: ${req.params.id} is not available`);
         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
         return res.status(404).json({error: `Not found: Zigbee2MQTT with ID: ${req.params.id} is not available`});
-    }else if(queryResult.rows[0]['type'] !== "device"){
+    }else if(queryResult.rows[0]['type'] === "group"){
         console.log(`Bad Request: ID: ${req.params.id} belongs to a Zigbee2MQTT group. Data requests are not available for groups`);
         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
         return res.status(400).json({error: `Bad Request: ID: ${req.params.id} belongs to a Zigbee2MQTT group. Data requests are not available for groups`});
@@ -881,7 +880,7 @@ app.get("/zigbee2mqtt/:id/get", async (req, res) => {
 })
 
 // (#3) "/zigbee2mqtt/{id}/set" POST the state of a specific Zigbee2MQTT device or group
-app.post("/zigbee2mqtt/:id/set", async (req, res) => {
+app.post("/zigbee2mqtt/:id", async (req, res) => {
     let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
     if(await SECURITY_CHECK(res, req, specific_api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
         return;
@@ -889,12 +888,19 @@ app.post("/zigbee2mqtt/:id/set", async (req, res) => {
 
     const entityID = req.params.id;
     // Optional arguments; will be NULL if not provided
-    const lightState = req.query.state;
-    const lightBrightness = req.query.brightness;
-    const lightColorTemperature = req.query.color_temperature;
+    // for groups and lights:
+    const lightState = req.query.light_state;
+    const lightBrightness = req.query.light_brightness;
+    const lightColorTemperature = req.query.light_color_temperature;
+    // for switches:
+    const switchState = req.query.switch_state;
+    // for blinds:
+    const blindsState = req.query.blinds_state;
+    const blindsPosition = req.query.blinds_position;
 
     // Step 1: Check if an Zigbee2MQTT device or group with ID: entity_id is available
     let baseTopic = "";
+    let deviceType = "";
     let queryResult = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${entityID}'`);
     if(!queryResult.rowCount) {
         console.log(`Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`);
@@ -903,40 +909,83 @@ app.post("/zigbee2mqtt/:id/set", async (req, res) => {
     }else{
         // If entity_id is found, store its base topic
         baseTopic = queryResult.rows[0]["base_topic"];
+        deviceType = queryResult.rows[0]["type"];
     }
 
-    // Step 2: Check if at least one optional parameter was given
-    if(!lightState && !lightBrightness && !lightColorTemperature){
-        console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
-        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-        return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
-    }
-
-    // Step 3: Check if the given values are valid and build the json file to be published
     let toPublish = {};
-    if(lightState){
-        if(lightState !== "ON" && lightState !== "OFF"){
-            console.log(`Bad Request: Invalid 'state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
+    // each type of device has a corresponding json file
+    if(deviceType === "group" || deviceType === "light"){
+        // Step 2: Check if at least one optional parameter was given
+        if(!lightState && !lightBrightness && !lightColorTemperature){
+            console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
+            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
         }
-        toPublish['state'] = lightState;
-    }
-    if(lightBrightness){
-        if(lightBrightness < 0 || lightBrightness > 254){
-            console.log(`Bad Request: Invalid 'brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightBrightness} \n - Possible values: any integer from 0 to 254`);
+
+        // Step 3: Check if the given values are valid and build the json file to be published
+        if(lightState){
+            if(lightState !== "ON" && lightState !== "OFF"){
+                console.log(`Bad Request: Invalid 'light_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
+            }
+            toPublish['state'] = lightState;
+        }
+        if(lightBrightness){
+            if(lightBrightness < 0 || lightBrightness > 254){
+                console.log(`Bad Request: Invalid 'light_brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightBrightness} \n - Possible values: any integer from 0 to 254`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightBrightness} | Possible values: any integer from 0 to 254`});
+            }
+            toPublish['brightness'] = lightBrightness;
+        }
+        if(lightColorTemperature){
+            if(lightColorTemperature < 153 || lightColorTemperature > 500){
+                console.log(`Bad Request: Invalid 'light_color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightColorTemperature} \n - Possible values: any integer from 153 to 500`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightColorTemperature} | Possible values: any integer from 153 to 500`});
+            }
+            toPublish['color_temp'] = lightColorTemperature;
+        }
+    }else if(deviceType === "switch"){
+        // Step 2-3: Check if the optional parameter was given and check if the given value is valid then build the json file to be published
+        if(!switchState){
+            console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightBrightness} | Possible values: any integer from 0 to 254`});
+            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
+        }else{
+            if(switchState !== "ON" && switchState !== "OFF" && switchState !== "TOGGLE"){
+                console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `ad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`});
+            }
+            toPublish['state'] = switchState;
         }
-        toPublish['brightness'] = lightBrightness;
-    }
-    if(lightColorTemperature){
-        if(lightColorTemperature < 153 || lightColorTemperature > 500){
-            console.log(`Bad Request: Invalid 'color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightColorTemperature} \n - Possible values: any integer from 153 to 500`);
+    }else if(deviceType === "blinds"){
+        // Step 2: Check if at least one optional parameter was given
+        if(!blindsState && !blindsPosition) {
+            console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(400).json({error: `Bad Request: Invalid 'color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightColorTemperature} | Possible values: any integer from 153 to 500`});
+            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
         }
-        toPublish['color_temp'] = lightColorTemperature;
+
+        // Step 3: Check if the given values are valid and build the json file to be published
+        if(blindsState) {
+            if (blindsState !== "OPEN" && blindsState !== "CLOSE" && blindsState !== "STOP") {
+                console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "OPEN", "CLOSE", "STOP"`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${blindsState} | - Possible values: "OPEN", "CLOSE", "STOP"`});
+            }
+            toPublish['state'] = blindsState;
+        }
+        if(blindsPosition) {
+            if (blindsPosition < 0 || blindsPosition > 100) {
+                console.log(`Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`});
+            }
+            toPublish['position'] = blindsPosition;
+        }
     }
 
     // Step 4: Publish the json file to the correct MQTT topic to set the light
@@ -1098,7 +1147,7 @@ app.post("/groups", async (req, res) => {
                     return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} does not exist`});
                 }
                 if(deviceNames[nameIndex] === "Zigbee2MQTT"){
-                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex]}' AND type = 'device'`);
+                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex]}' AND type != 'group'`);
                     if(!result.rowCount){
                         console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} cannot be added to a group`);
                         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
@@ -1114,7 +1163,7 @@ app.post("/groups", async (req, res) => {
                         return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`});
                     }
                     if(deviceNames[nameIndex] === "Zigbee2MQTT"){
-                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex][idIndex]}' AND type = 'device'`);
+                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex][idIndex]}' AND type != 'group'`);
                         if(!result.rowCount){
                             console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
                             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
@@ -1195,7 +1244,7 @@ app.put("/groups", async (req, res) => {
                     return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} does not exist`});
                 }
                 if(deviceNames[nameIndex] === "Zigbee2MQTT"){
-                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex]}' AND type = 'device'`);
+                    let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex]}' AND type != 'group'`);
                     if(!result.rowCount){
                         console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex]} cannot be added to a group`);
                         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
@@ -1211,7 +1260,7 @@ app.put("/groups", async (req, res) => {
                         return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`});
                     }
                     if(deviceNames[nameIndex] === "Zigbee2MQTT"){
-                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex][idIndex]}' AND type = 'device'`);
+                        let result = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${deviceIDs[nameIndex][idIndex]}' AND type != 'group'`);
                         if(!result.rowCount){
                             console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
                             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
@@ -1251,7 +1300,6 @@ app.delete("/groups", async (req, res) => {
     if(await SECURITY_CHECK(res, req, specific_api_key, [0]) === false){ //______ SECURITY CONDITIONAL
         return;
     }
-
 
     const id = req.query.id;
 

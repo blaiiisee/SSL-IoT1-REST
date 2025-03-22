@@ -281,7 +281,7 @@ paths:
           description: Unable to find specific Apollo AIR-1
         '400':
           description: Invalid Request
-          
+
   # Apollo MSR-2
   /msr-2:
     get:
@@ -433,7 +433,7 @@ paths:
           description: Unable to find specific Apollo MSR-2
         '400':
           description: Invalid Request
-          
+
   # Athom Smart Plug v2
   /smart-plug-v2:
     get:
@@ -667,7 +667,7 @@ paths:
           description: Unable to find specific AirGradient One
         '400':
           description: Invalid Request
-          
+
   # Zigbee2MQTT
   /zigbee2mqtt:
     get:
@@ -681,7 +681,7 @@ paths:
         '404':
           description: Zigbee2MQTT device and group IDs not found
 
-  /zigbee2mqtt/{id}/get:
+  /zigbee2mqtt/{id}:
     get:
       tags: ['Zigbee2MQTT']
       description: Return most recent/historical data of a specific Zigbee2MQTT device
@@ -712,8 +712,6 @@ paths:
           description: Unable to find specific Zigbee2MQTT device
         '400':
           description: Invalid Request
-
-  /zigbee2mqtt/{id}/set:
     post:
       tags: ['Zigbee2MQTT']
       description: Set the state, brightness, and/or color temperature of a light or group of lights
@@ -725,17 +723,32 @@ paths:
           required: true
           schema:
             type: string
-        - name: state
+        - name: light_state
           in: query
           required: false
           schema:
             type: string
-        - name: brightness
+        - name: light_brightness
           in: query
           required: false
           schema:
             type: int
-        - name: color_temperature
+        - name: light_color_temperature
+          in: query
+          required: false
+          schema:
+            type: int
+        - name: switch_state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: blinds_state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: blinds_position
           in: query
           required: false
           schema:
@@ -943,5 +956,3 @@ paths:
           description: Successfully returned most recent data from all devices in a specific group
         '404':
           description: Unable to find specific group
-
-
