@@ -20,7 +20,7 @@ security:
 # ______ SECURITY FEATURES END ______
 
 servers:
-  - url: 'http://10.158.66.30:81'
+  - url: 'http://10.158.66.30:80'
 
 paths:
   # DIGITAL TWIN
