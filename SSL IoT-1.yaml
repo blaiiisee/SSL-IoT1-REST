@@ -20,7 +20,7 @@ security:
 # ______ SECURITY FEATURES END ______
 
 servers:
-  - url: 'http://10.158.66.30:81'
+  - url: 'http://10.158.66.30:80'
 
 paths:
   # DIGITAL TWIN
@@ -506,7 +506,7 @@ paths:
 
   /smart-plug-v2/{id}/avg:
     get:
-      tags: ['Athom Smart Plug V2']
+      tags: ['Athom Smart Plug v2']
       description: Return average historical data of a specific sensor data of a specific Athom Smart Plug v2
       security:
         - ApiKeyAuth: [ ]

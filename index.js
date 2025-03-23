@@ -914,7 +914,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
 
     let toPublish = {};
     // each type of device has a corresponding json file
-    if(deviceType === "group" || deviceType === "light"){
+    if(deviceType === "group" || deviceType === "lights"){
         // Step 2: Check if at least one optional parameter was given
         if(!lightState && !lightBrightness && !lightColorTemperature){
             console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
