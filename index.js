@@ -13,11 +13,11 @@ const cors = require("cors");
 const _ = require("lodash");
 // Require uuid to Generate Unique IDs *NOT USED YET*
 const { v4: uuidv4, parse} = require("uuid");
+// dotenv package
+require('dotenv').config();
 // MQTT Package
 const mqtt = require("mqtt");
 const url = `${process.env.mqttIP}:${process.env.mqttPort}`;
-// dotenv package
-require('dotenv').config();
 // Server Start-up
 const app = express();
 app.use(cors({origin: '*'}));
