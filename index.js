@@ -15,8 +15,9 @@ const _ = require("lodash");
 const { v4: uuidv4, parse} = require("uuid");
 // MQTT Package
 const mqtt = require("mqtt");
-const url = 'mqtt://10.158.66.30:1883';
-
+const url = `${process.env.mqttIP}:${process.env.mqttPort}`;
+// dotenv package
+require('dotenv').config();
 // Server Start-up
 const app = express();
 app.use(cors({origin: '*'}));
@@ -31,11 +32,11 @@ const {Client} = require('pg')
 const {Result} = require("lodash");
 
 const client = new Client({
-    host: "10.158.66.30",   // Requires eduroam or EEE VPN access
-    user: "postgres",
-    port: 5432,
-    password: "JXU73zooIoT1",
-    database: "postgres"
+    host: process.env.dbIP,   // Requires eduroam or EEE VPN access
+    user: process.env.dbusername,
+    port: process.env.dbport,
+    password: process.env.dbpassword,
+    database: process.env.database
 })
 
 client.connect();
@@ -48,10 +49,10 @@ const options = {
     clean: true,
     connectTimeout: 4000,
     // Authentication
-    clientId: 'REST API Server',
-    username: 'admin',
-    password: 'ILoveSmartiLab!!!_JXU73zooIoT1',
-    reconnectPeriod: '60000',
+    clientId: process.env.clientID,
+    username: process.env.mqttUsername,
+    password: process.env.mqttPassword,
+    reconnectPeriod: process.env.mqttReconnectPeriod,
 }
 
 const mqttclient = mqtt.connect(url, options);
@@ -373,8 +374,13 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
     console.log(` - MQTT Topic: ${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`);
     console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
     UPDATE_transactions(api_key, type, uri, true);
-    mqttclient.publish(`${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`, JSON.stringify(toPublish));
-    return res.status(200).send(`POST request to ${deviceName} with ID: ${deviceID} OK`);
+    mqttclient.publish(`${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to ${deviceName} with ID: ${deviceID} OK`);
+        }
+    });
 }
 
 // ---- END Standardized Function Calls ---- //
@@ -755,8 +761,14 @@ app.post("/msr-2/:id/buzzer", async (req, res) => {
     console.log(` - MQTT Topic: apollo_msr_2_${deviceID}/buzzer`);
     console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-    mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish));
-    return res.status(200).send(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
+    // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
+    mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
+        }
+    });
 })
 
 // (#5) "/msr-2/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Apollo MSR-2
@@ -814,8 +826,14 @@ app.post("/smart-plug-v2/:id/relay", async (req, res) => {
     console.log(` - MQTT Topic: athom_smart_plug_v2_${deviceID}/relay`);
     console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-    mqttclient.publish(`athom_smart_plug_v2_${deviceID}/relay`, JSON.stringify(toPublish));
-    return res.status(200).send(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
+    // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
+    mqttclient.publish(`athom_smart_plug_v2_${deviceID}/relay`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
+        }
+    });
 })
 
 // (#4) "/smart-plug-v2/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Athom Smart Plug v2
@@ -993,8 +1011,14 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
     console.log(` - MQTT Topic: ${baseTopic}/${entityID}/set`);
     console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-    mqttclient.publish(`${baseTopic}/${entityID}/set`, JSON.stringify(toPublish));
-    return res.status(200).send(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
+    // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
+    mqttclient.publish(`${baseTopic}/${entityID}/set`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
+        }
+    });
 })
 
 // END Zigbee2MQTT Endpoints --------------------------- //
@@ -1374,4 +1398,4 @@ app.get("/groups/:id", async (req, res) => {
 
 
 // Server hosted at port 80
-app.listen(80, () => console.log("SSL IoT 1 Server Hosted at port 80"));
+app.listen(process.env.hostPort, () => console.log(`SSL IoT 1 Server Hosted at port ${process.env.hostPort}`));
