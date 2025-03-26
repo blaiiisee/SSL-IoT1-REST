@@ -6,6 +6,7 @@ WORKDIR /RESTapi
 #Install dependencies
 COPY package*.json ./
 RUN npm install
+RUN npm install dotenv
 
 COPY . .
 
