@@ -15,10 +15,7 @@ const _ = require("lodash");
 const { v4: uuidv4, parse} = require("uuid");
 // MQTT Package
 const mqtt = require("mqtt");
-const url = 'mqtt://10.158.66.30:1883';
-// PostgreSQL query formatter
-const format = require("pg-format");
-
+const url = `${process.env.mqttIP}:${process.env.mqttPort}`;
 // Server Start-up
 const app = express();
 app.use(cors({origin: '*'}));
@@ -31,8 +28,6 @@ app.use(express.json());
 // -- START PostgreSQL Connection Options -- //
 const {Client} = require('pg')
 const {Result} = require("lodash");
-const {query} = require("express");
-const {NULL} = require("pg-format/lib/reserved");
 
 const client = new Client({
     host: "10.158.66.30",   // Requires eduroam or EEE VPN access
@@ -52,10 +47,10 @@ const options = {
     clean: true,
     connectTimeout: 4000,
     // Authentication
-    clientId: 'REST API Server',
-    username: 'admin',
-    password: 'ILoveSmartiLab!!!_JXU73zooIoT1',
-    reconnectPeriod: '60000',
+    clientId: process.env.clientID,
+    username: process.env.mqttUsername,
+    password: process.env.mqttPassword,
+    reconnectPeriod: process.env.mqttReconnectPeriod,
 }
 
 const mqttclient = mqtt.connect(url, options);
@@ -66,6 +61,7 @@ const mqttclient = mqtt.connect(url, options);
 // --- START Standardized Function Calls --- //
 
 // ____ SECURITY START ____
+
 async function USER_is_available(user_name) {
     try{
         const queryResult = await client.query('SELECT * FROM users WHERE user_name = $1;', [user_name]);
@@ -330,87 +326,87 @@ async function GET_avg(res, req, deviceName, api_key, type, uri){
 
 // POST LED light/strip
 async function POST_light(res, req, deviceName, api_key, type, uri){
-    try{
-        if(await SECURITY_CHECK(res, req, api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
-            return;
-        }
-
-        const deviceID = req.params.id;
-        // Optional arguments; will be NULL if not provided
-        const lightState = req.query.state;
-        const lightRed   = req.query.red;
-        const lightGreen = req.query.green;
-        const lightBlue  = req.query.blue;
-        const lightBrightness = req.query.brightness;
-
-        // Step 1: Check if an deviceName with ID: deviceID is available
-        if(await ID_is_available(`${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}`, deviceID) === false){
-            console.log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
-            UPDATE_transactions(api_key, type, uri, false);
-            return res.status(404).json({error: `Not Found: ${deviceName} with ID: ${deviceID} does not exist`});
-        }
-
-        // Step 2: Check if at least one optional parameter was given
-        if(!lightState && !lightRed && !lightGreen && !lightBlue && !lightBrightness){
-            console.log(`Bad Request: Incomplete parameters in POST request for ${deviceName} with ID: ${deviceID}`);
-            UPDATE_transactions(api_key, type, uri, false);
-            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for ${deviceName} with ID: ${deviceID}`});
-        }
-
-        // Step 3: Check if the given values are valid and build the JSON file to be published
-        let toPublish = {};
-        if(lightState){
-            if(lightState !== "ON" && lightState !== "OFF"){
-                console.log(`Bad Request: Invalid 'state' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
-                UPDATE_transactions(api_key, type, uri, false);
-                return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
-            }
-            toPublish['state'] = lightState;
-        }
-        if(lightRed){
-            if(lightRed < 0 || lightRed > 1){
-                console.log(`Bad Request: Invalid 'red' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightRed} \n - Possible values: any value from 0-1`);
-                UPDATE_transactions(api_key, type, uri, false);
-                return res.status(400).json({error: `Bad Request: Invalid 'red' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightRed} | Possible values: any value from 0-1`});
-            }
-            toPublish['r'] = lightRed;
-        }
-        if(lightGreen){
-            if(lightGreen < 0 || lightGreen > 1){
-                console.log(`Bad Request: Invalid 'green' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightGreen} \n - Possible values: any value from 0-1`);
-                UPDATE_transactions(api_key, type, uri, false);
-                return res.status(400).json({error: `Bad Request: Invalid 'green' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightGreen} | Possible values: any value from 0-1`});
-            }
-            toPublish['g'] = lightGreen;
-        }
-        if(lightBlue){
-            if(lightBlue < 0 || lightBlue > 1){
-                console.log(`Bad Request: Invalid 'blue' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBlue} \n - Possible values: any value from 0-1`);
-                UPDATE_transactions(api_key, type, uri, false);
-                return res.status(400).json({error: `Bad Request: Invalid 'blue' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightBlue} | Possible values: any value from 0-1`});
-            }
-            toPublish['b'] = lightBlue;
-        }
-        if(lightBrightness){
-            if(lightBrightness < 0 || lightBrightness > 1){
-                console.log(`Bad Request: Invalid 'brightness' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBrightness} \n - Possible values: any value from 0-1`);
-                UPDATE_transactions(api_key, type, uri, false);
-                return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightBrightness} | Possible values: any value from 0-1`});
-            }
-            toPublish['brightness'] = lightBrightness;
-        }
-
-        // Step 4: Publish the JSON file to the correct MQTT topic to set the LED light/strip
-        console.log(`POST request to ${deviceName} with ID: ${deviceID} OK`);
-        console.log(` - MQTT Topic: ${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`);
-        console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
-        UPDATE_transactions(api_key, type, uri, true);
-        mqttclient.publish(`${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`, JSON.stringify(toPublish));
-        return res.status(200).send(`POST request to ${deviceName} with ID: ${deviceID} OK`);
-    }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
-        return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
+    if(await SECURITY_CHECK(res, req, api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
+        return;
     }
+
+    const deviceID = req.params.id;
+    // Optional arguments; will be NULL if not provided
+    const lightState = req.query.state;
+    const lightRed   = req.query.red;
+    const lightGreen = req.query.green;
+    const lightBlue  = req.query.blue;
+    const lightBrightness = req.query.brightness;
+
+    // Step 1: Check if an deviceName with ID: deviceID is available
+    if(await ID_is_available(`${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}`, deviceID) === false){
+        console.log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
+        UPDATE_transactions(api_key, type, uri, false);
+        return res.status(404).json({error: `Not Found: ${deviceName} with ID: ${deviceID} does not exist`});
+    }
+
+    // Step 2: Check if at least one optional parameter was given
+    if(!lightState && !lightRed && !lightGreen && !lightBlue && !lightBrightness){
+        console.log(`Bad Request: Incomplete parameters in POST request for ${deviceName} with ID: ${deviceID}`);
+        UPDATE_transactions(api_key, type, uri, false);
+        return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for ${deviceName} with ID: ${deviceID}`});
+    }
+
+    // Step 3: Check if the given values are valid and build the JSON file to be published
+    let toPublish = {};
+    if(lightState){
+        if(lightState !== "ON" && lightState !== "OFF"){
+            console.log(`Bad Request: Invalid 'state' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
+            UPDATE_transactions(api_key, type, uri, false);
+            return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
+        }
+        toPublish['state'] = lightState;
+    }
+    if(lightRed){
+        if(lightRed < 0 || lightRed > 1){
+            console.log(`Bad Request: Invalid 'red' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightRed} \n - Possible values: any value from 0-1`);
+            UPDATE_transactions(api_key, type, uri, false);
+            return res.status(400).json({error: `Bad Request: Invalid 'red' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightRed} | Possible values: any value from 0-1`});
+        }
+        toPublish['r'] = lightRed;
+    }
+    if(lightGreen){
+        if(lightGreen < 0 || lightGreen > 1){
+            console.log(`Bad Request: Invalid 'green' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightGreen} \n - Possible values: any value from 0-1`);
+            UPDATE_transactions(api_key, type, uri, false);
+            return res.status(400).json({error: `Bad Request: Invalid 'green' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightGreen} | Possible values: any value from 0-1`});
+        }
+        toPublish['g'] = lightGreen;
+    }
+    if(lightBlue){
+        if(lightBlue < 0 || lightBlue > 1){
+            console.log(`Bad Request: Invalid 'blue' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBlue} \n - Possible values: any value from 0-1`);
+            UPDATE_transactions(api_key, type, uri, false);
+            return res.status(400).json({error: `Bad Request: Invalid 'blue' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightBlue} | Possible values: any value from 0-1`});
+        }
+        toPublish['b'] = lightBlue;
+    }
+    if(lightBrightness){
+        if(lightBrightness < 0 || lightBrightness > 1){
+            console.log(`Bad Request: Invalid 'brightness' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBrightness} \n - Possible values: any value from 0-1`);
+            UPDATE_transactions(api_key, type, uri, false);
+            return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightBrightness} | Possible values: any value from 0-1`});
+        }
+        toPublish['brightness'] = lightBrightness;
+    }
+
+    // Step 4: Publish the JSON file to the correct MQTT topic to set the LED light/strip
+    console.log(`POST request to ${deviceName} with ID: ${deviceID} OK`);
+    console.log(` - MQTT Topic: ${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`);
+    console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+    UPDATE_transactions(api_key, type, uri, true);
+    mqttclient.publish(`${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to ${deviceName} with ID: ${deviceID} OK`);
+        }
+    });
 }
 // ____ ENDPOINTS END ____
 
@@ -779,42 +775,43 @@ app.post("/msr-2/:id/light", async (req, res) => {
 
 // (#4) "/msr-2/{id}/buzzer" POST the rtttl string to be played on the buzzer of a specific Apollo MSR-2
 app.post("/msr-2/:id/buzzer", async (req, res) => {
-    try{
-        let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-        if(await SECURITY_CHECK(res, req, specific_api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
-            return;
-        }
-
-        const deviceID = req.params.id;
-        // Optional argument; will be NULL if not provided
-        const mtttl_string = req.query.mtttl_string;
-
-        // Step 1: Check if an Apollo MSR-2 with ID: deviceID is available
-        if(await ID_is_available('apollo_msr_2', deviceID) === false){
-            console.log(`Not Found: Apollo MSR-2 with ID: ${deviceID} does not exist`);
-            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(404).json({error: `Not Found: Apollo MSR-2 with ID: ${deviceID} does not exist`});
-        }
-
-        // Step 2: Check if the string to play was given
-        if(!mtttl_string){
-            console.log(`Bad Request: Incomplete parameters in POST request for Apollo MSR-2 with ID: ${device_id}`);
-            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Apollo MSR-2 with ID: ${device_id}`});
-        }
-
-        // Step 3: Build and publish the JSON file to the correct MQTT topic to play the buzzer
-        let toPublish = {'mtttl_string' : `${mtttl_string}`};
-        console.log(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
-        console.log(` - MQTT Topic: apollo_msr_2_${deviceID}/buzzer`);
-        console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
-        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-        mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish));
-        return res.status(200).send(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
-    }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
-        return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
+    let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
+    if(await SECURITY_CHECK(res, req, specific_api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
+        return;
     }
+
+    const deviceID = req.params.id;
+    // Optional argument; will be NULL if not provided
+    const mtttl_string = req.query.mtttl_string;
+
+    // Step 1: Check if an Apollo MSR-2 with ID: deviceID is available
+    if(await ID_is_available('apollo_msr_2', deviceID) === false){
+        console.log(`Not Found: Apollo MSR-2 with ID: ${deviceID} does not exist`);
+        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+        return res.status(404).json({error: `Not Found: Apollo MSR-2 with ID: ${deviceID} does not exist`});
+    }
+
+    // Step 2: Check if the string to play was given
+    if(!mtttl_string){
+        console.log(`Bad Request: Incomplete parameters in POST request for Apollo MSR-2 with ID: ${device_id}`);
+        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+        return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Apollo MSR-2 with ID: ${device_id}`});
+    }
+
+    // Step 3: Build and publish the JSON file to the correct MQTT topic to play the buzzer
+    let toPublish = {'mtttl_string' : `${mtttl_string}`};
+    console.log(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
+    console.log(` - MQTT Topic: apollo_msr_2_${deviceID}/buzzer`);
+    console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
+    // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
+    mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
+        }
+    });
 })
 
 // (#5) "/msr-2/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Apollo MSR-2
@@ -839,46 +836,47 @@ app.get("/smart-plug-v2/:id", async (req, res) => {
 
 // (#3) "/smart-plug-v2/{id}/relay" POST relay of specific Athom Smart Plug v2
 app.post("/smart-plug-v2/:id/relay", async (req, res) => {
-    try{
-        let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-        if(await SECURITY_CHECK(res, req, specific_api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
-            return;
-        }
-
-        const deviceID = req.params.id;
-        // Optional argument; will be NULL if not provided
-        const relayState = req.query.state;
-
-        // Step 1: Check if an Athom Smart Plug v2 with ID: deviceID is available
-        if(await ID_is_available('athom_smart_plug_v2', deviceID) === false){
-            console.log(`Not Found: Athom Smart Plug v2 with ID: ${deviceID} does not exist`);
-            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(404).json({error: `Not Found: Athom Smart Plug v2 with ID: ${deviceID} does not exist`});
-        }
-
-        // Step 2: Check if relayState was given and is a valid value
-        if(!relayState){
-            console.log(`Bad Request: Incomplete parameters in POST request for Athom Smart Plug v2 with ID: ${deviceID}`);
-            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Athom Smart Plug v2 with ID: ${deviceID}`});
-        }else if(relayState !== "On" && relayState !== "Off"){
-            console.log(`Bad Request: Invalid 'state' parameter in POST request for Athom Smart Plug v2 with ID: ${deviceID}. \n - Given value: ${relayState} \n - Possible values: "On", "Off"`);
-            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Athom Smart Plug v2 with ID: ${deviceID}. | Given value: ${relayState} | Possible values: "On", "Off"`});
-        }
-
-        // Step 3: Build and publish the JSON file to the correct MQTT topic to set the relay
-        let toPublish = {'state' : `${relayState}`};
-        console.log(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
-        console.log(` - MQTT Topic: athom_smart_plug_v2_${deviceID}/relay`);
-        console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
-        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-        mqttclient.publish(`athom_smart_plug_v2_${deviceID}/relay`, JSON.stringify(toPublish));
-        return res.status(200).send(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
-    }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
-        return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
+    let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
+    if(await SECURITY_CHECK(res, req, specific_api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
+        return;
     }
+
+    const deviceID = req.params.id;
+    // Optional argument; will be NULL if not provided
+    const relayState = req.query.state;
+
+    // Step 1: Check if an Athom Smart Plug v2 with ID: deviceID is available
+    if(await ID_is_available('athom_smart_plug_v2', deviceID) === false){
+        console.log(`Not Found: Athom Smart Plug v2 with ID: ${deviceID} does not exist`);
+        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+        return res.status(404).json({error: `Not Found: Athom Smart Plug v2 with ID: ${deviceID} does not exist`});
+    }
+
+    // Step 2: Check if relayState was given and is a valid value
+    if(!relayState){
+        console.log(`Bad Request: Incomplete parameters in POST request for Athom Smart Plug v2 with ID: ${deviceID}`);
+        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+        return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Athom Smart Plug v2 with ID: ${deviceID}`});
+    }else if(relayState !== "On" && relayState !== "Off"){
+        console.log(`Bad Request: Invalid 'state' parameter in POST request for Athom Smart Plug v2 with ID: ${deviceID}. \n - Given value: ${relayState} \n - Possible values: "On", "Off"`);
+        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+        return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Athom Smart Plug v2 with ID: ${deviceID}. | Given value: ${relayState} | Possible values: "On", "Off"`});
+    }
+
+    // Step 3: Build and publish the JSON file to the correct MQTT topic to set the relay
+    let toPublish = {'state' : `${relayState}`};
+    console.log(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
+    console.log(` - MQTT Topic: athom_smart_plug_v2_${deviceID}/relay`);
+    console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
+    // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
+    mqttclient.publish(`athom_smart_plug_v2_${deviceID}/relay`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
+        }
+    });
 })
 
 // (#4) "/smart-plug-v2/{id}/avg&options" GET the average historical data of a specific sensor data of a specific Athom Smart Plug v2
@@ -953,130 +951,126 @@ app.get("/zigbee2mqtt/:id", async (req, res) => {
 
 // (#3) "/zigbee2mqtt/{id}/set" POST the state of a specific Zigbee2MQTT device or group
 app.post("/zigbee2mqtt/:id", async (req, res) => {
-    try{
-        let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
-        if(await SECURITY_CHECK(res, req, specific_api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
-            return;
-        }
-
-        const entityID = req.params.id;
-        // Optional arguments; will be NULL if not provided
-        // for groups and lights:
-        const lightState = req.query.light_state;
-        const lightBrightness = req.query.light_brightness;
-        const lightColorTemperature = req.query.light_color_temperature;
-        // for switches:
-        const switchState = req.query.switch_state;
-        // for blinds:
-        const blindsState = req.query.blinds_state;
-        const blindsPosition = req.query.blinds_position;
-
-        // Step 1: Check if an Zigbee2MQTT device or group with ID: entity_id is available
-        let baseTopic = "";
-        let deviceType = "";
-
-        let queryText = 'SELECT * FROM zigbee2mqtt WHERE id = $1;';
-        let queryValues = [entityID];
-        let queryResult = await client.query(queryText, queryValues);
-
-        if(!queryResult.rowCount) {
-            console.log(`Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`);
-            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-            return res.status(404).json({error: `Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`});
-        }else{
-            // If entity_id is found, store its base topic
-            baseTopic = queryResult.rows[0]["base_topic"];
-            deviceType = queryResult.rows[0]["type"];
-        }
-
-        let toPublish = {};
-        // each type of device has a corresponding json file
-        if(deviceType === "group" || deviceType === "lights"){
-            // Step 2: Check if at least one optional parameter was given
-            if(!lightState && !lightBrightness && !lightColorTemperature){
-                console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
-                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
-            }
-
-            // Step 3: Check if the given values are valid and build the json file to be published
-            if(lightState){
-                if(lightState !== "ON" && lightState !== "OFF"){
-                    console.log(`Bad Request: Invalid 'light_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
-                    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
-                }
-                toPublish['state'] = lightState;
-            }
-            if(lightBrightness){
-                if(lightBrightness < 0 || lightBrightness > 254){
-                    console.log(`Bad Request: Invalid 'light_brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightBrightness} \n - Possible values: any integer from 0 to 254`);
-                    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightBrightness} | Possible values: any integer from 0 to 254`});
-                }
-                toPublish['brightness'] = lightBrightness;
-            }
-            if(lightColorTemperature){
-                if(lightColorTemperature < 153 || lightColorTemperature > 500){
-                    console.log(`Bad Request: Invalid 'light_color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightColorTemperature} \n - Possible values: any integer from 153 to 500`);
-                    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    return res.status(400).json({error: `Bad Request: Invalid 'color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightColorTemperature} | Possible values: any integer from 153 to 500`});
-                }
-                toPublish['color_temp'] = lightColorTemperature;
-            }
-        }else if(deviceType === "switch"){
-            // Step 2-3: Check if the optional parameter was given and check if the given value is valid then build the json file to be published
-            if(!switchState){
-                console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
-                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
-            }else{
-                if(switchState !== "ON" && switchState !== "OFF" && switchState !== "TOGGLE"){
-                    console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`);
-                    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    return res.status(400).json({error: `ad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`});
-                }
-                toPublish['state'] = switchState;
-            }
-        }else if(deviceType === "blinds"){
-            // Step 2: Check if at least one optional parameter was given
-            if(!blindsState && !blindsPosition) {
-                console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
-                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
-            }
-
-            // Step 3: Check if the given values are valid and build the json file to be published
-            if(blindsState) {
-                if (blindsState !== "OPEN" && blindsState !== "CLOSE" && blindsState !== "STOP") {
-                    console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "OPEN", "CLOSE", "STOP"`);
-                    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    return res.status(400).json({error: `Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${blindsState} | - Possible values: "OPEN", "CLOSE", "STOP"`});
-                }
-                toPublish['state'] = blindsState;
-            }
-            if(blindsPosition) {
-                if (blindsPosition < 0 || blindsPosition > 100) {
-                    console.log(`Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`);
-                    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    return res.status(400).json({error: `Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`});
-                }
-                toPublish['position'] = blindsPosition;
-            }
-        }
-
-        // Step 4: Publish the json file to the correct MQTT topic to set the light
-        console.log(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
-        console.log(` - MQTT Topic: ${baseTopic}/${entityID}/set`);
-        console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
-        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-        mqttclient.publish(`${baseTopic}/${entityID}/set`, JSON.stringify(toPublish));
-        return res.status(200).send(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
-    }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
-        return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
+    let specific_api_key = req.header("x-api-key"); //Extract API Key from Header
+    if(await SECURITY_CHECK(res, req, specific_api_key, [0,2]) === false){ //______ SECURITY CONDITIONAL
+        return;
     }
 
+    const entityID = req.params.id;
+    // Optional arguments; will be NULL if not provided
+    // for groups and lights:
+    const lightState = req.query.light_state;
+    const lightBrightness = req.query.light_brightness;
+    const lightColorTemperature = req.query.light_color_temperature;
+    // for switches:
+    const switchState = req.query.switch_state;
+    // for blinds:
+    const blindsState = req.query.blinds_state;
+    const blindsPosition = req.query.blinds_position;
+
+    // Step 1: Check if an Zigbee2MQTT device or group with ID: entity_id is available
+    let baseTopic = "";
+    let deviceType = "";
+    let queryResult = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${entityID}'`);
+    if(!queryResult.rowCount) {
+        console.log(`Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`);
+        UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+        return res.status(404).json({error: `Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`});
+    }else{
+        // If entity_id is found, store its base topic
+        baseTopic = queryResult.rows[0]["base_topic"];
+        deviceType = queryResult.rows[0]["type"];
+    }
+
+    let toPublish = {};
+    // each type of device has a corresponding json file
+    if(deviceType === "group" || deviceType === "lights"){
+        // Step 2: Check if at least one optional parameter was given
+        if(!lightState && !lightBrightness && !lightColorTemperature){
+            console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
+            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
+        }
+
+        // Step 3: Check if the given values are valid and build the json file to be published
+        if(lightState){
+            if(lightState !== "ON" && lightState !== "OFF"){
+                console.log(`Bad Request: Invalid 'light_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
+            }
+            toPublish['state'] = lightState;
+        }
+        if(lightBrightness){
+            if(lightBrightness < 0 || lightBrightness > 254){
+                console.log(`Bad Request: Invalid 'light_brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightBrightness} \n - Possible values: any integer from 0 to 254`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightBrightness} | Possible values: any integer from 0 to 254`});
+            }
+            toPublish['brightness'] = lightBrightness;
+        }
+        if(lightColorTemperature){
+            if(lightColorTemperature < 153 || lightColorTemperature > 500){
+                console.log(`Bad Request: Invalid 'light_color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightColorTemperature} \n - Possible values: any integer from 153 to 500`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightColorTemperature} | Possible values: any integer from 153 to 500`});
+            }
+            toPublish['color_temp'] = lightColorTemperature;
+        }
+    }else if(deviceType === "switch"){
+        // Step 2-3: Check if the optional parameter was given and check if the given value is valid then build the json file to be published
+        if(!switchState){
+            console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
+            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
+        }else{
+            if(switchState !== "ON" && switchState !== "OFF" && switchState !== "TOGGLE"){
+                console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `ad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`});
+            }
+            toPublish['state'] = switchState;
+        }
+    }else if(deviceType === "blinds"){
+        // Step 2: Check if at least one optional parameter was given
+        if(!blindsState && !blindsPosition) {
+            console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
+            UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+            return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
+        }
+
+        // Step 3: Check if the given values are valid and build the json file to be published
+        if(blindsState) {
+            if (blindsState !== "OPEN" && blindsState !== "CLOSE" && blindsState !== "STOP") {
+                console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "OPEN", "CLOSE", "STOP"`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${blindsState} | - Possible values: "OPEN", "CLOSE", "STOP"`});
+            }
+            toPublish['state'] = blindsState;
+        }
+        if(blindsPosition) {
+            if (blindsPosition < 0 || blindsPosition > 100) {
+                console.log(`Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`);
+                UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
+                return res.status(400).json({error: `Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`});
+            }
+            toPublish['position'] = blindsPosition;
+        }
+    }
+
+    // Step 4: Publish the json file to the correct MQTT topic to set the light
+    console.log(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
+    console.log(` - MQTT Topic: ${baseTopic}/${entityID}/set`);
+    console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+    UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
+    // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
+    mqttclient.publish(`${baseTopic}/${entityID}/set`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
+        if (err) {
+            return res.status(400).json({error: `Bad Request: MQTT Connection Failed`});
+        }else{
+            return res.status(200).send(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
+        }
+    });
 })
 
 // END Zigbee2MQTT Endpoints --------------------------- //
@@ -1495,4 +1489,4 @@ app.get("/groups/:id", async (req, res) => {
 
 
 // Server hosted at port 80
-app.listen(80, () => console.log("SSL IoT-1 REST API Server Hosted at port 80"));
+app.listen(process.env.hostPort, () => console.log(`SSL IoT 1 Server Hosted at port ${process.env.hostPort}`));
