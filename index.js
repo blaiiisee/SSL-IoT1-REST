@@ -199,7 +199,7 @@ async function GET_ids(res, req, deviceName, api_key, type, uri){
         }else{
             console.log(`There are no ${deviceName} IDs to return`);
             UPDATE_transactions(api_key, type, uri, false);
-            res.json({});
+            res.json([]);
         }
     }catch(err){
         console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
@@ -238,7 +238,7 @@ async function GET_data(res, req, deviceName, api_key, type, uri){
                 }
                 console.log(`Successfully returned most recent data from ${deviceName} with ID: ${deviceID}`);
                 UPDATE_transactions(api_key, type, uri, true);
-                res.json(data.rows);
+                res.json(data.rows[0]);
             })
         }else if(timeStart && timeEnd){
             // [B] If optional parameter values for timeStart and timeEnd were given
@@ -299,7 +299,7 @@ async function GET_avg(res, req, deviceName, api_key, type, uri){
                 }
                 console.log(`Successfully returned historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
                 UPDATE_transactions(api_key, type, uri, true);
-                res.json(data.rows);
+                res.json(data.rows[0]);
             })
         }else if(timeStart && timeEnd && specData){
             // [B] If optional parameter values for timeStart and timeEnd were given
@@ -702,7 +702,7 @@ app.get("/transactions", async (req,res)=>{
                 if (!err){
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
                     console.log(`SUCCESSFULLY returned most recent transactions`);
-                    res.json(data.rows);
+                    res.json(data.rows[0]);
                 } else {
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     console.log("ERROR: Getting most recent transactions");
