@@ -63,6 +63,27 @@ const mqttclient = mqtt.connect(url, options);
 
 // --- START Standardized Function Calls --- //
 
+// Server logging
+
+async function server_Log(logs) {
+    try{
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        const mseconds = String(date.getMilliseconds()).padStart(3, '0');
+
+        console.log(`[${year}-${month}-${day} ${hours}:${minutes}:${seconds}:${mseconds}] ${logs}`);
+        return;
+    }catch(err){
+        console.log(`[${year}-${month}-${day} ${hours}:${minutes}:${seconds}:${mseconds}] Internal Server Error: An unexpected error occurred in the server logging function\n${err}`);
+        return '';
+    }
+}
+
 // ____ SECURITY START ____
 
 async function USER_is_available(user_name) {
@@ -70,7 +91,7 @@ async function USER_is_available(user_name) {
         const queryResult = await client.query('SELECT * FROM users WHERE user_name = $1;', [user_name]);
         return !(queryResult.rowCount === 0);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in USER_is_available function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in USER_is_available function\n${err}`);
         return false;
     }
 }
@@ -80,7 +101,7 @@ async function KEY_is_available(api_key) {
         const queryResult = await client.query('SELECT * FROM users WHERE api_key = $1;', [api_key]);
         return !(queryResult.rowCount === 0);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in KEY_is_available function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in KEY_is_available function\n${err}`);
         return false;
     }
 }
@@ -90,7 +111,7 @@ async function RETURN_access_level(api_key) {
         const result = await client.query(`SELECT * FROM users WHERE api_key = $1;`, [api_key]);
         return result.rows[0]["access_level"];
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in RETURN_access_level function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in RETURN_access_level function\n${err}`);
         return -1;
     }
 }
@@ -100,7 +121,7 @@ async function RETURN_user_name(api_key) {
         const result = await client.query(`SELECT * FROM users WHERE api_key = $1;`, [api_key]);
         return result.rows[0]["user_name"];
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in RETURN_user_name function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in RETURN_user_name function\n${err}`);
         return '';
     }
 }
@@ -111,7 +132,7 @@ async function SECURITY_CHECK(res, req, api_key, array) {
         if(to_verify){
             access_level = await RETURN_access_level(api_key);
         }else{
-            console.log(`Not Found: API Key does not exist`);
+            server_Log(`Not Found: API Key does not exist`);
             res.status(401).json({ error: `API Key does not exist: Ensure your API key is valid and correctly provided.`});
             return false;
         }
@@ -120,11 +141,11 @@ async function SECURITY_CHECK(res, req, api_key, array) {
             return true;  //check if access level matches one of the described values
         }
 
-        console.log(`Forbidden Request: User does not have access to this endpoint`);
+        server_Log(`Forbidden Request: User does not have access to this endpoint`);
         res.status(403).json({ error: `Forbidden Request: User does not have access to this endpoint`});
         return false;
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in SECURITY_CHECK function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in SECURITY_CHECK function\n${err}`);
         return false;
     }
 }
@@ -143,7 +164,7 @@ async function getCurrentTimestamp() {
 
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in getCurrentTimestamp function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in getCurrentTimestamp function\n${err}`);
         return '';
     }
 }
@@ -156,13 +177,13 @@ async function UPDATE_transactions(api_key, type, uri, success) {
 
         client.query(`INSERT INTO transactions (timestamp, user_name, type, uri, success) VALUES ($1, $2, $3, $4, $5);`, [await getCurrentTimestamp(), await RETURN_user_name(api_key), type, uri, success], (err, response) => {
             if(!err){
-                console.log("Successfully logged transaction");
+                server_Log("Successfully logged transaction");
             }else{
-                console.log("ERROR: Unsuccessfully logged transaction");
+                server_Log("ERROR: Unsuccessfully logged transaction");
             }
         })
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in UPDATE_transactions function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in UPDATE_transactions function\n${err}`);
     }
 }
 // ____ TRANSACTIONS END ____
@@ -174,7 +195,7 @@ async function ID_is_available(table, deviceID){
         const queryResult = await client.query(format('SELECT * FROM %I WHERE id = $1;', table), [deviceID]);
         return !(queryResult.rowCount === 0);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred in ID_is_available function\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred in ID_is_available function\n${err}`);
         return false;
     }
 }
@@ -193,16 +214,16 @@ async function GET_ids(res, req, deviceName, api_key, type, uri){
             for (let index = 0; index < queryResult.rowCount; index++) {
                 ids.push(queryResult.rows[index]["id"]);
             }
-            console.log(`Successfully returned all available ${deviceName} IDs`);
+            server_Log(`Successfully returned all available ${deviceName} IDs`);
             UPDATE_transactions(api_key, type, uri, true);
             res.json(ids);
         }else{
-            console.log(`There are no ${deviceName} IDs to return`);
+            server_Log(`There are no ${deviceName} IDs to return`);
             UPDATE_transactions(api_key, type, uri, false);
             res.json([]);
         }
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 }
@@ -221,7 +242,7 @@ async function GET_data(res, req, deviceName, api_key, type, uri){
 
         // Step 1: Check if an deviceName with ID: deviceID is available
         if(await ID_is_available(`${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}`, deviceID) === false){
-            console.log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
+            server_Log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
             UPDATE_transactions(api_key, type, uri, false);
             return res.status(404).json({error: `Not Found: ${deviceName} with ID: ${deviceID} does not exist`});
         }
@@ -233,10 +254,10 @@ async function GET_data(res, req, deviceName, api_key, type, uri){
 
             client.query(queryText, (err, data) => {
                 if(err){
-                    console.log(`Internal Server Error: Unable to get most recent data from ${deviceName} with ID: ${deviceID}`);
+                    server_Log(`Internal Server Error: Unable to get most recent data from ${deviceName} with ID: ${deviceID}`);
                     return res.status(500).send(`Internal Server Error: Unable to get most recent data from ${deviceName} with ID: ${deviceID}`);
                 }
-                console.log(`Successfully returned most recent data from ${deviceName} with ID: ${deviceID}`);
+                server_Log(`Successfully returned most recent data from ${deviceName} with ID: ${deviceID}`);
                 UPDATE_transactions(api_key, type, uri, true);
                 res.json(data.rows[0]);
             })
@@ -247,21 +268,21 @@ async function GET_data(res, req, deviceName, api_key, type, uri){
 
             client.query(queryText, queryValues, (err, data) => {
                 if(err){
-                    console.log(`Bad Request: Invalid arguments in historical data GET request for ${deviceName} with ID: ${deviceID}`);
+                    server_Log(`Bad Request: Invalid arguments in historical data GET request for ${deviceName} with ID: ${deviceID}`);
                     return res.status(400).json({error: `Bad Request: Invalid arguments in historical data GET request for ${deviceName} with ID: ${deviceID}`});
                 }
-                console.log(`Successfully returned historical data (${timeStart} to ${timeEnd}) from ${deviceName} with ID: ${deviceID}`);
+                server_Log(`Successfully returned historical data (${timeStart} to ${timeEnd}) from ${deviceName} with ID: ${deviceID}`);
                 UPDATE_transactions(api_key, type, uri, true);
                 res.json(data.rows);
             })
         }else{
             // [C] If optional parameter values are INCOMPLETE (Error 400)
-            console.log(`Bad Request: Incomplete parameters in GET request for ${deviceName} with ID: ${deviceID}`);
+            server_Log(`Bad Request: Incomplete parameters in GET request for ${deviceName} with ID: ${deviceID}`);
             UPDATE_transactions(api_key, type, uri, false);
             return res.status(400).json({error: `Bad Request: Incomplete parameters in GET request for ${deviceName} with ID: ${deviceID}`});
         }
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 }
@@ -281,7 +302,7 @@ async function GET_avg(res, req, deviceName, api_key, type, uri){
 
         // Step 1: Check if an deviceName with ID: deviceID is available
         if(await ID_is_available(`${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}`, deviceID) === false){
-            console.log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
+            server_Log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
             UPDATE_transactions(api_key, type, uri, false);
             return res.status(404).json({error: `Not Found: ${deviceName} with ID: ${deviceID} does not exist`});
         }
@@ -294,10 +315,10 @@ async function GET_avg(res, req, deviceName, api_key, type, uri){
 
             client.query(queryText, queryValues, (err, data) => {
                 if(err || data.rowCount === 0){
-                    console.log(`Internal Server Error: Unable to get historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
+                    server_Log(`Internal Server Error: Unable to get historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
                     return res.status(500).send(`Internal Server Error: Unable to get historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
                 }
-                console.log(`Successfully returned historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
+                server_Log(`Successfully returned historical ${specData} data from ${deviceName} with ID: ${deviceID}`);
                 UPDATE_transactions(api_key, type, uri, true);
                 res.json(data.rows[0]);
             })
@@ -308,21 +329,21 @@ async function GET_avg(res, req, deviceName, api_key, type, uri){
 
             client.query(queryText, queryValues, (err, data) => {
                 if(err || data.rowCount === 0){
-                    console.log(`Bad Request: Invalid arguments in average historical ${specData} data GET request for ${deviceName} with ID: ${deviceID}`);
+                    server_Log(`Bad Request: Invalid arguments in average historical ${specData} data GET request for ${deviceName} with ID: ${deviceID}`);
                     return res.status(400).json({error: `Bad Request: Invalid arguments in average historical ${specData} data GET request for ${deviceName} with ID: ${deviceID}`});
                 }
-                console.log(`Successfully returned average historical ${specData} data (${timeStart} to ${timeEnd}) from ${deviceName} with ID: ${deviceID}`);
+                server_Log(`Successfully returned average historical ${specData} data (${timeStart} to ${timeEnd}) from ${deviceName} with ID: ${deviceID}`);
                 UPDATE_transactions(api_key, type, uri, true);
                 res.json(data.rows);
             })
         }else{
             // [C] If optional parameter values are INCOMPLETE (Error 400)
-            console.log(`Bad Request: Incomplete parameters in GET average historical data request for ${deviceName} with ID: ${deviceID}`);
+            server_Log(`Bad Request: Incomplete parameters in GET average historical data request for ${deviceName} with ID: ${deviceID}`);
             UPDATE_transactions(api_key, type, uri, false);
             return res.status(400).json({error: `Bad Request: Incomplete parameters in GET average historical data request for ${deviceName} with ID: ${deviceID}`});
         }
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 }
@@ -344,14 +365,14 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
 
         // Step 1: Check if an deviceName with ID: deviceID is available
         if(await ID_is_available(`${deviceName.toLowerCase().replaceAll("-","_").replaceAll(" ","_")}`, deviceID) === false){
-            console.log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
+            server_Log(`Not Found: ${deviceName} with ID: ${deviceID} does not exist`);
             UPDATE_transactions(api_key, type, uri, false);
             return res.status(404).json({error: `Not Found: ${deviceName} with ID: ${deviceID} does not exist`});
         }
 
         // Step 2: Check if at least one optional parameter was given
         if(!lightState && !lightRed && !lightGreen && !lightBlue && !lightBrightness){
-            console.log(`Bad Request: Incomplete parameters in POST request for ${deviceName} with ID: ${deviceID}`);
+            server_Log(`Bad Request: Incomplete parameters in POST request for ${deviceName} with ID: ${deviceID}`);
             UPDATE_transactions(api_key, type, uri, false);
             return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for ${deviceName} with ID: ${deviceID}`});
         }
@@ -360,7 +381,7 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
         let toPublish = {};
         if(lightState){
             if(lightState !== "ON" && lightState !== "OFF"){
-                console.log(`Bad Request: Invalid 'state' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
+                server_Log(`Bad Request: Invalid 'state' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
                 UPDATE_transactions(api_key, type, uri, false);
                 return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
             }
@@ -368,7 +389,7 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
         }
         if(lightRed){
             if(lightRed < 0 || lightRed > 1){
-                console.log(`Bad Request: Invalid 'red' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightRed} \n - Possible values: any value from 0-1`);
+                server_Log(`Bad Request: Invalid 'red' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightRed} \n - Possible values: any value from 0-1`);
                 UPDATE_transactions(api_key, type, uri, false);
                 return res.status(400).json({error: `Bad Request: Invalid 'red' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightRed} | Possible values: any value from 0-1`});
             }
@@ -376,7 +397,7 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
         }
         if(lightGreen){
             if(lightGreen < 0 || lightGreen > 1){
-                console.log(`Bad Request: Invalid 'green' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightGreen} \n - Possible values: any value from 0-1`);
+                server_Log(`Bad Request: Invalid 'green' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightGreen} \n - Possible values: any value from 0-1`);
                 UPDATE_transactions(api_key, type, uri, false);
                 return res.status(400).json({error: `Bad Request: Invalid 'green' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightGreen} | Possible values: any value from 0-1`});
             }
@@ -384,7 +405,7 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
         }
         if(lightBlue){
             if(lightBlue < 0 || lightBlue > 1){
-                console.log(`Bad Request: Invalid 'blue' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBlue} \n - Possible values: any value from 0-1`);
+                server_Log(`Bad Request: Invalid 'blue' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBlue} \n - Possible values: any value from 0-1`);
                 UPDATE_transactions(api_key, type, uri, false);
                 return res.status(400).json({error: `Bad Request: Invalid 'blue' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightBlue} | Possible values: any value from 0-1`});
             }
@@ -392,7 +413,7 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
         }
         if(lightBrightness){
             if(lightBrightness < 0 || lightBrightness > 1){
-                console.log(`Bad Request: Invalid 'brightness' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBrightness} \n - Possible values: any value from 0-1`);
+                server_Log(`Bad Request: Invalid 'brightness' parameter in POST request for ${deviceName} with ID: ${deviceID}. \n - Given value: ${lightBrightness} \n - Possible values: any value from 0-1`);
                 UPDATE_transactions(api_key, type, uri, false);
                 return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for ${deviceName} with ID: ${deviceID}. | Given value: ${lightBrightness} | Possible values: any value from 0-1`});
             }
@@ -402,19 +423,19 @@ async function POST_light(res, req, deviceName, api_key, type, uri){
         // Step 4: Publish the JSON file to the correct MQTT topic to set the LED light/strip
         mqttclient.publish(`${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
             if (err) {
-                console.log(`Internal Server Error: MQTT Connection Failed`);
+                server_Log(`Internal Server Error: MQTT Connection Failed`);
                 UPDATE_transactions(api_key, type, uri, false);
                 return res.status(500).json({error: `Internal Server Error: MQTT Connection Failed`});
             }else{
-                console.log(`POST request to ${deviceName} with ID: ${deviceID} OK`);
-                console.log(` - MQTT Topic: ${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`);
-                console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+                server_Log(`POST request to ${deviceName} with ID: ${deviceID} OK`);
+                server_Log(` - MQTT Topic: ${deviceName.toLowerCase().replace("-","_").replace(" ","_")}_${deviceID}/light`);
+                server_Log(` - JSON File: ${JSON.stringify(toPublish)}`);
                 UPDATE_transactions(api_key, type, uri, true);
                 return res.status(200).send(`POST request to ${deviceName} with ID: ${deviceID} OK`);
             }
         });
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 
@@ -436,7 +457,7 @@ app.get("/access/:api_key", async (req,res)=>{
             return;
         }
 
-        console.log(`Successfully returned access level`);
+        server_Log(`Successfully returned access level`);
         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
 
         const api_key = req.params.api_key;
@@ -448,7 +469,7 @@ app.get("/access/:api_key", async (req,res)=>{
             res.json(-1); // RETURN -1 if API Key is NOT Valid
         }
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -474,16 +495,16 @@ app.get("/users", async (req,res)=>{
                     arr_user_names.push(response.rows[user]["user_name"]);
                 }
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-                console.log(`Successfully returned list of usernames`);
+                server_Log(`Successfully returned list of usernames`);
                 res.json(arr_user_names);
             } else {
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                console.log(`Database Error Occurred: An unexpected error occurred while creating the user.`);
+                server_Log(`Database Error Occurred: An unexpected error occurred while creating the user.`);
                 return res.status(500).json({ error: `Database Error Occurred: An unexpected error occurred while creating the user.` });
             }
         })
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -503,21 +524,21 @@ app.post("/users/:user_name", async (req,res)=>{
         // Check if user is available
         let to_check = await USER_is_available(user_name); // Call ID checker function
         if (to_check === true) {
-            console.log(`ERROR: ${user_name} is already taken`);
+            server_Log(`ERROR: ${user_name} is already taken`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(409).json({ error: `${user_name} is already taken: Please choose a different username.` });
         }
 
         // Check if access_level is defined
         if(access_level === undefined){
-            console.log(`ERROR: Request Incomplete Parameters`);
+            server_Log(`ERROR: Request Incomplete Parameters`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({ error: `Missing required parameters: Ensure all required fields are provided.` });
         }
 
         // Check access_level is a number
         if(!(/\d/.test(access_level))){
-            console.log(`ERROR: Invalid data type`);
+            server_Log(`ERROR: Invalid data type`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({ error: `Invalid data type: Ensure all parameters are of the correct data type.` });
         }
@@ -529,17 +550,17 @@ app.post("/users/:user_name", async (req,res)=>{
             if (!err){
                 //SUCCESS
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-                console.log(`SUCCESSFULLY create new user ${user_name}`);
+                server_Log(`SUCCESSFULLY create new user ${user_name}`);
                 return res.status(200).send();
             } else {
                 //ERROR PGADMIN
-                console.log("ERROR: Unsuccessfully in creating new user");
+                server_Log("ERROR: Unsuccessfully in creating new user");
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(500).json({ error: `Database error occurred: An unexpected error occurred while creating the user.` });
             }
         })
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -556,7 +577,7 @@ app.get("/users/:user_name", async (req,res)=>{
         const user_name = req.params.user_name;
         let to_check = await USER_is_available(user_name); // Call ID checker function
         if (to_check === false) {
-            console.log(`ERROR: User with the username ${user_name} is unavailable`);
+            server_Log(`ERROR: User with the username ${user_name} is unavailable`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({ error: `Not Found: User ${user_name} not available` });
         }
@@ -565,7 +586,7 @@ app.get("/users/:user_name", async (req,res)=>{
         client.query(`SELECT * FROM users WHERE user_name='${user_name}'`, (err, response) => {
             if(response){
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-                console.log(`SUCCESSFULLY return data of user ${user_name}`);
+                server_Log(`SUCCESSFULLY return data of user ${user_name}`);
                 res.json(response.rows[0]);
             }
             else {
@@ -574,7 +595,7 @@ app.get("/users/:user_name", async (req,res)=>{
             }
         })
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 
@@ -594,7 +615,7 @@ app.put("/users/:user_name", async (req,res)=>{
         // Check if user is available
         let to_check = await USER_is_available(user_name); // Call ID checker function
         if (to_check === false) {
-            console.log(`ERROR: User with the username ${user_name} is unavailable`);
+            server_Log(`ERROR: User with the username ${user_name} is unavailable`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({ error: `Not Found: User ${user_name} not available` });
         }
@@ -603,7 +624,7 @@ app.put("/users/:user_name", async (req,res)=>{
         if(access_level !== undefined){
             //do nothing
         }else{
-            console.log(`ERROR: Request Incomplete Parameters`);
+            server_Log(`ERROR: Request Incomplete Parameters`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({ error: `Missing required parameters: Ensure all required fields are provided.` });
         }
@@ -612,7 +633,7 @@ app.put("/users/:user_name", async (req,res)=>{
         if(/\d/.test(access_level)){
             //do nothing
         }else{
-            console.log(`ERROR: Invalid data type`);
+            server_Log(`ERROR: Invalid data type`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({ error: `Invalid data type: Ensure all parameters are of the correct data type.` });
         }
@@ -621,17 +642,17 @@ app.put("/users/:user_name", async (req,res)=>{
             if (!err){
                 //SUCCESS
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-                console.log(`SUCCESSFULLY changed access level of user ${user_name} to ${access_level}`);
+                server_Log(`SUCCESSFULLY changed access level of user ${user_name} to ${access_level}`);
                 return res.status(200).send();
             } else {
                 //ERROR PGADMIN
-                console.log(`ERROR: Unsuccessfully modified user ${user_name}'s access level to ${access_level}`);
+                server_Log(`ERROR: Unsuccessfully modified user ${user_name}'s access level to ${access_level}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(500).json({ error: `Database error occurred: An unexpected error occurred.` });
             }
         })
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -649,7 +670,7 @@ app.delete("/users/:user_name", async (req,res)=>{
         // Check if user is available
         let to_check = await USER_is_available(user_name); // Call ID checker function
         if (to_check === false) {
-            console.log(`ERROR: User with the username '${user_name}' is unavailable`);
+            server_Log(`ERROR: User with the username '${user_name}' is unavailable`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({ error: `Not Found: User '${user_name}' not available` });
         }
@@ -660,18 +681,18 @@ app.delete("/users/:user_name", async (req,res)=>{
             if (!err){
                 //SUCCESS
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-                console.log(`SUCCESSFULLY deleted user ${user_name}`);
+                server_Log(`SUCCESSFULLY deleted user ${user_name}`);
                 return res.status(200).send();
             } else {
                 //ERROR PGADMIN
-                console.log(`ERROR: Unsuccessfully deleted user ${user_name}`);
+                server_Log(`ERROR: Unsuccessfully deleted user ${user_name}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(500).json({ error: `Database error occurred: An unexpected error occurred.` });
             }
             //END POSTGRES CONNECTION
         })
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -701,11 +722,11 @@ app.get("/transactions", async (req,res)=>{
             client.query(`SELECT * FROM transactions ORDER BY timestamp DESC LIMIT 10`, (err, data) => {
                 if (!err){
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-                    console.log(`SUCCESSFULLY returned most recent transactions`);
+                    server_Log(`SUCCESSFULLY returned most recent transactions`);
                     res.json(data.rows[0]);
                 } else {
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    console.log("ERROR: Getting most recent transactions");
+                    server_Log("ERROR: Getting most recent transactions");
                 }
             })
 
@@ -718,23 +739,23 @@ app.get("/transactions", async (req,res)=>{
             client.query(`SELECT * FROM transactions WHERE (timestamp BETWEEN '${time_start}' AND '${time_end}')`, (err, data) => {
                 if(!err) {
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-                    console.log(`SUCCESSFULLY returned transactions`);
+                    server_Log(`SUCCESSFULLY returned transactions`);
                     res.json(data.rows);
                 } else {
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
-                    console.log("ERROR: Getting transactions");
+                    server_Log("ERROR: Getting transactions");
                     return res.status(500).json({ error: `Database error occurred: An unexpected error occurred.` });
                 }
             })
 
         } else {
             // [C] Error 400: Optional parameters are INCOMPLETE
-            console.log("ERROR: Incomplete parameters in transactions request");
+            server_Log("ERROR: Incomplete parameters in transactions request");
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({ error: 'Invalid request: Missing arguments in request' });
         }
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -798,14 +819,14 @@ app.post("/msr-2/:id/buzzer", async (req, res) => {
 
         // Step 1: Check if an Apollo MSR-2 with ID: deviceID is available
         if(await ID_is_available('apollo_msr_2', deviceID) === false){
-            console.log(`Not Found: Apollo MSR-2 with ID: ${deviceID} does not exist`);
+            server_Log(`Not Found: Apollo MSR-2 with ID: ${deviceID} does not exist`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({error: `Not Found: Apollo MSR-2 with ID: ${deviceID} does not exist`});
         }
 
         // Step 2: Check if the string to play was given
         if(!mtttl_string){
-            console.log(`Bad Request: Incomplete parameters in POST request for Apollo MSR-2 with ID: ${device_id}`);
+            server_Log(`Bad Request: Incomplete parameters in POST request for Apollo MSR-2 with ID: ${device_id}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Apollo MSR-2 with ID: ${device_id}`});
         }
@@ -815,18 +836,18 @@ app.post("/msr-2/:id/buzzer", async (req, res) => {
         // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
         mqttclient.publish(`apollo_msr_2_${deviceID}/buzzer`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
             if (err) {
-                console.log(`Internal Server Error: MQTT Connection Failed`);
+                server_Log(`Internal Server Error: MQTT Connection Failed`);
                 return res.status(500).json({error: `Internal Server Error: MQTT Connection Failed`});
             }else{
-                console.log(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
-                console.log(` - MQTT Topic: apollo_msr_2_${deviceID}/buzzer`);
-                console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+                server_Log(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
+                server_Log(` - MQTT Topic: apollo_msr_2_${deviceID}/buzzer`);
+                server_Log(` - JSON File: ${JSON.stringify(toPublish)}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
                 return res.status(200).send(`POST request to Apollo MSR-2 with ID: ${deviceID} OK`);
             }
         });
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -865,18 +886,18 @@ app.post("/smart-plug-v2/:id/relay", async (req, res) => {
 
         // Step 1: Check if an Athom Smart Plug v2 with ID: deviceID is available
         if(await ID_is_available('athom_smart_plug_v2', deviceID) === false){
-            console.log(`Not Found: Athom Smart Plug v2 with ID: ${deviceID} does not exist`);
+            server_Log(`Not Found: Athom Smart Plug v2 with ID: ${deviceID} does not exist`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({error: `Not Found: Athom Smart Plug v2 with ID: ${deviceID} does not exist`});
         }
 
         // Step 2: Check if relayState was given and is a valid value
         if(!relayState){
-            console.log(`Bad Request: Incomplete parameters in POST request for Athom Smart Plug v2 with ID: ${deviceID}`);
+            server_Log(`Bad Request: Incomplete parameters in POST request for Athom Smart Plug v2 with ID: ${deviceID}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Athom Smart Plug v2 with ID: ${deviceID}`});
         }else if(relayState !== "On" && relayState !== "Off"){
-            console.log(`Bad Request: Invalid 'state' parameter in POST request for Athom Smart Plug v2 with ID: ${deviceID}. \n - Given value: ${relayState} \n - Possible values: "On", "Off"`);
+            server_Log(`Bad Request: Invalid 'state' parameter in POST request for Athom Smart Plug v2 with ID: ${deviceID}. \n - Given value: ${relayState} \n - Possible values: "On", "Off"`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Athom Smart Plug v2 with ID: ${deviceID}. | Given value: ${relayState} | Possible values: "On", "Off"`});
         }
@@ -886,19 +907,19 @@ app.post("/smart-plug-v2/:id/relay", async (req, res) => {
         // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
         mqttclient.publish(`athom_smart_plug_v2_${deviceID}/relay`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
             if (err) {
-                console.log(`Internal Server Error: MQTT Connection Failed`);
+                server_Log(`Internal Server Error: MQTT Connection Failed`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(500).json({error: `Internal Server Error: MQTT Connection Failed`});
             }else{
-                console.log(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
-                console.log(` - MQTT Topic: athom_smart_plug_v2_${deviceID}/relay`);
-                console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+                server_Log(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
+                server_Log(` - MQTT Topic: athom_smart_plug_v2_${deviceID}/relay`);
+                server_Log(` - JSON File: ${JSON.stringify(toPublish)}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
                 return res.status(200).send(`POST request to Athom Smart Plug v2 with ID: ${deviceID} OK`);
             }
         });
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 
@@ -958,18 +979,18 @@ app.get("/zigbee2mqtt/:id", async (req, res) => {
         let queryResult = await client.query(queryText, queryValues);
 
         if(!queryResult.rowCount) {
-            console.log(`Not found: Zigbee2MQTT with ID: ${req.params.id} does not exist`);
+            server_Log(`Not found: Zigbee2MQTT with ID: ${req.params.id} does not exist`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({error: `Not found: Zigbee2MQTT with ID: ${req.params.id} does not exist`});
         }else if(queryResult.rows[0]['type'] === "group"){
-            console.log(`Bad Request: ID: ${req.params.id} belongs to a Zigbee2MQTT group. Data requests are not available for groups`);
+            server_Log(`Bad Request: ID: ${req.params.id} belongs to a Zigbee2MQTT group. Data requests are not available for groups`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({error: `Bad Request: ID: ${req.params.id} belongs to a Zigbee2MQTT group. Data requests are not available for groups`});
         }
 
         return GET_data(res, req, "Zigbee2MQTT", specific_api_key, req.method, req.originalUrl);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -999,7 +1020,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
         let deviceType = "";
         let queryResult = await client.query(`SELECT * FROM zigbee2mqtt WHERE id = '${entityID}'`);
         if(!queryResult.rowCount) {
-            console.log(`Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`);
+            server_Log(`Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({error: `Not Found: Zigbee2MQTT with ID: ${entityID} does not exist`});
         }else{
@@ -1013,7 +1034,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
         if(deviceType === "group" || deviceType === "lights"){
             // Step 2: Check if at least one optional parameter was given
             if(!lightState && !lightBrightness && !lightColorTemperature){
-                console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
+                server_Log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
             }
@@ -1021,7 +1042,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
             // Step 3: Check if the given values are valid and build the json file to be published
             if(lightState){
                 if(lightState !== "ON" && lightState !== "OFF"){
-                    console.log(`Bad Request: Invalid 'light_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
+                    server_Log(`Bad Request: Invalid 'light_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightState} \n - Possible values: "ON", "OFF"`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(400).json({error: `Bad Request: Invalid 'state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightState} | Possible values: "ON", "OFF"`});
                 }
@@ -1029,7 +1050,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
             }
             if(lightBrightness){
                 if(lightBrightness < 0 || lightBrightness > 254){
-                    console.log(`Bad Request: Invalid 'light_brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightBrightness} \n - Possible values: any integer from 0 to 254`);
+                    server_Log(`Bad Request: Invalid 'light_brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightBrightness} \n - Possible values: any integer from 0 to 254`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(400).json({error: `Bad Request: Invalid 'brightness' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightBrightness} | Possible values: any integer from 0 to 254`});
                 }
@@ -1037,7 +1058,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
             }
             if(lightColorTemperature){
                 if(lightColorTemperature < 153 || lightColorTemperature > 500){
-                    console.log(`Bad Request: Invalid 'light_color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightColorTemperature} \n - Possible values: any integer from 153 to 500`);
+                    server_Log(`Bad Request: Invalid 'light_color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${lightColorTemperature} \n - Possible values: any integer from 153 to 500`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(400).json({error: `Bad Request: Invalid 'color_temperature' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${lightColorTemperature} | Possible values: any integer from 153 to 500`});
                 }
@@ -1046,12 +1067,12 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
         }else if(deviceType === "switch"){
             // Step 2-3: Check if the optional parameter was given and check if the given value is valid then build the json file to be published
             if(!switchState){
-                console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
+                server_Log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
             }else{
                 if(switchState !== "ON" && switchState !== "OFF" && switchState !== "TOGGLE"){
-                    console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`);
+                    server_Log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(400).json({error: `ad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "ON", "OFF", "TOGGLE"`});
                 }
@@ -1060,7 +1081,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
         }else if(deviceType === "blinds"){
             // Step 2: Check if at least one optional parameter was given
             if(!blindsState && !blindsPosition) {
-                console.log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
+                server_Log(`Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Zigbee2MQTT with ID: ${entityID}`});
             }
@@ -1068,7 +1089,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
             // Step 3: Check if the given values are valid and build the json file to be published
             if(blindsState) {
                 if (blindsState !== "OPEN" && blindsState !== "CLOSE" && blindsState !== "STOP") {
-                    console.log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "OPEN", "CLOSE", "STOP"`);
+                    server_Log(`Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsState} \n - Possible values: "OPEN", "CLOSE", "STOP"`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(400).json({error: `Bad Request: Invalid 'blinds_state' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. | Given value: ${blindsState} | - Possible values: "OPEN", "CLOSE", "STOP"`});
                 }
@@ -1076,7 +1097,7 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
             }
             if(blindsPosition) {
                 if (blindsPosition < 0 || blindsPosition > 100) {
-                    console.log(`Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`);
+                    server_Log(`Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(400).json({error: `Bad Request: Invalid 'blinds_position' parameter in POST request for Zigbee2MQTT with ID: ${entityID}. \n - Given value: ${blindsPosition} \n - Possible values: any integer from 0 to 100`});
                 }
@@ -1088,19 +1109,19 @@ app.post("/zigbee2mqtt/:id", async (req, res) => {
         // Guarantee the message with MQTT QOS2 and return an error request if there is an issue sending the message
         mqttclient.publish(`${baseTopic}/${entityID}/set`, JSON.stringify(toPublish), { qos: 2 }, (err) => {
             if (err) {
-                console.log(`Internal Server Error: MQTT Connection Failed`);
+                server_Log(`Internal Server Error: MQTT Connection Failed`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
                 return res.status(500).json({error: `Internal Server Error: MQTT Connection Failed`});
             }else{
-                console.log(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
-                console.log(` - MQTT Topic: ${baseTopic}/${entityID}/set`);
-                console.log(` - JSON File: ${JSON.stringify(toPublish)}`);
+                server_Log(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
+                server_Log(` - MQTT Topic: ${baseTopic}/${entityID}/set`);
+                server_Log(` - JSON File: ${JSON.stringify(toPublish)}`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
                 return res.status(200).send(`POST request to Zigbee2MQTT with ID: ${entityID} OK`);
             }
         });
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 
@@ -1136,14 +1157,14 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
 
         // Step 1: Check if an Sensibo with ID: deviceID is available
         if(await ID_is_available('sensibo', deviceID) === false){
-            console.log(`Not Found: Sensibo with ID: ${deviceID} does not exist`);
+            server_Log(`Not Found: Sensibo with ID: ${deviceID} does not exist`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({error: `Not Found: Sensibo with ID: ${deviceID} does not exist`});
         }
 
         // Step 2: Check if at least one optional parameter is given
         if(!hvacMode && !targetTemperature){
-            console.log(`Bad Request: Incomplete parameters in POST request for Sensibo with ID: ${deviceID}`);
+            server_Log(`Bad Request: Incomplete parameters in POST request for Sensibo with ID: ${deviceID}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({error: `Bad Request: Incomplete parameters in POST request for Sensibo with ID: ${deviceID}`});
         }
@@ -1151,7 +1172,7 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
         // Step 3: POST based on parameter values and check if they are valid
         if(hvacMode){
             if(hvacMode !== "off" && hvacMode !== "heat" && hvacMode !== "cool"){
-                console.log(`Bad Request: Invalid 'hvac_mode' parameter in POST request for Sensibo with ID: ${deviceID} \n - Given value: ${hvacMode} \n - Possible values: "off", "heat", "cool"`);
+                server_Log(`Bad Request: Invalid 'hvac_mode' parameter in POST request for Sensibo with ID: ${deviceID} \n - Given value: ${hvacMode} \n - Possible values: "off", "heat", "cool"`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(404).json({error: `Bad Request: Invalid 'hvac_mode' parameter in POST request for Sensibo with ID: ${deviceID} | Given value: ${hvacMode} | Possible values: "off", "heat", "cool"`});
             }
@@ -1160,7 +1181,7 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
         }
         if(targetTemperature){
             if(targetTemperature < 10 || targetTemperature > 35){
-                console.log(`Bad Request: Invalid 'target_temperature' parameter in POST request for Sensibo with ID: ${deviceID} \n - Given value: ${targetTemperature} \n - Possible values: any value from 10 to 35`);
+                server_Log(`Bad Request: Invalid 'target_temperature' parameter in POST request for Sensibo with ID: ${deviceID} \n - Given value: ${targetTemperature} \n - Possible values: any value from 10 to 35`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(404).json({error: `Bad Request: Invalid 'target_temperature' parameter in POST request for Sensibo with ID: ${deviceID} | Given value: ${targetTemperature} | Possible values: any value from 10 to 35`});
             }
@@ -1169,13 +1190,13 @@ app.post("/sensibo/:id/hvac", async (req, res) => {
         }
 
         // Step 4: Return status 200 OK
-        console.log(`POST request to Sensibo with ID: ${deviceID} OK`);
+        server_Log(`POST request to Sensibo with ID: ${deviceID} OK`);
         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
-        if(hvacMode){console.log(` - Given HVAC mode: ${hvacMode}`);}
-        if(targetTemperature){console.log(` - Given target temperature: ${targetTemperature}`);}
+        if(hvacMode){server_Log(` - Given HVAC mode: ${hvacMode}`);}
+        if(targetTemperature){server_Log(` - Given target temperature: ${targetTemperature}`);}
         return res.status(200).send(`POST request to Sensibo with ID: ${deviceID} OK`);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -1213,12 +1234,12 @@ app.get("/groups", async (req, res) => {
                     data[row["id"]]["zigbee2mqtt_ids"] = row["zigbee2mqtt_ids"];
                 }
             }
-            console.log("Successfully returned all group IDs");
+            server_Log("Successfully returned all group IDs");
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
             res.json(data);
         }
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -1244,7 +1265,7 @@ app.post("/groups", async (req, res) => {
         let queryResult = await client.query(queryText, queryValues);
 
         if(queryResult.rows.length){
-            console.log(`Bad Request: There is already a group with ID: ${id}`);
+            server_Log(`Bad Request: There is already a group with ID: ${id}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({error: `Bad Request: There is already a group with ID: ${id}`});
         }
@@ -1267,7 +1288,7 @@ app.post("/groups", async (req, res) => {
             for(let idIndex = 0; idIndex < deviceIDs[nameIndex].length; idIndex++){
                 id_is_available = await ID_is_available(`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[nameIndex][idIndex]);
                 if(!id_is_available){
-                    console.log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`);
+                    server_Log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`});
                 }
@@ -1277,7 +1298,7 @@ app.post("/groups", async (req, res) => {
                     queryResult = await client.query(queryText, queryValues);
 
                     if(!queryResult.rowCount){
-                        console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
+                        server_Log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
                         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                         return res.status(404).json({error: `Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`});
                     }
@@ -1292,22 +1313,22 @@ app.post("/groups", async (req, res) => {
 
         await client.query(queryText, (err) => {
             if(err){
-                console.log(err);
-                console.log(`Bad Request: Bad arguments in POST request`);
+                server_Log(err);
+                server_Log(`Bad Request: Bad arguments in POST request`);
                 UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                 return res.status(400).json({error: `Bad Request: Bad arguments in POST request`})
             }
         })
 
-        console.log(`Successfully crated a new group with ID: ${id}`);
-        if(apollo_air_1_ids){console.log(` - Apollo AIR-1's: ${apollo_air_1_ids}`);}
-        if(apollo_msr_2_ids){console.log(` - Apollo MSR-2's: ${apollo_msr_2_ids}`);}
-        if(athom_smart_plug_v2_ids){console.log(` - Athom Smart Plug v2's: ${athom_smart_plug_v2_ids}`);}
-        if(zigbee2mqtt_ids){console.log(` - Zigbee2MQTT's: ${zigbee2mqtt_ids}`);}
+        server_Log(`Successfully crated a new group with ID: ${id}`);
+        if(apollo_air_1_ids){server_Log(` - Apollo AIR-1's: ${apollo_air_1_ids}`);}
+        if(apollo_msr_2_ids){server_Log(` - Apollo MSR-2's: ${apollo_msr_2_ids}`);}
+        if(athom_smart_plug_v2_ids){server_Log(` - Athom Smart Plug v2's: ${athom_smart_plug_v2_ids}`);}
+        if(zigbee2mqtt_ids){server_Log(` - Zigbee2MQTT's: ${zigbee2mqtt_ids}`);}
         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
         return res.status(200).send(`Successfully crated a new group with ID: ${id}`);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -1333,14 +1354,14 @@ app.put("/groups", async (req, res) => {
         let queryResult = await client.query(queryText, queryValues);
 
         if(!queryResult.rows.length){
-            console.log(`Not Found: Group with ID: ${id} does not exist`);
+            server_Log(`Not Found: Group with ID: ${id} does not exist`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({error: `Not Found: Group with ID: ${id} does not exist`});
         }
 
         // Step 2: Check if at least one optional parameter is given
         if(!apollo_air_1_ids && !apollo_msr_2_ids && !athom_smart_plug_v2_ids && !zigbee2mqtt_ids){
-            console.log(`ERROR: Incomplete parameters in PUT request`);
+            server_Log(`ERROR: Incomplete parameters in PUT request`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(400).json({error: `Invalid request: Incomplete parameters in PUT request`});
         }
@@ -1369,7 +1390,7 @@ app.put("/groups", async (req, res) => {
             for(let idIndex = 0; idIndex < deviceIDs[nameIndex].length; idIndex++){
                 id_is_available = await ID_is_available(`${deviceNames[nameIndex].toLowerCase().replaceAll("-", "_").replaceAll(" ", "_")}`, deviceIDs[nameIndex][idIndex]);
                 if(!id_is_available){
-                    console.log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`);
+                    server_Log(`Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(404).json({error: `Not Found: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} does not exist`});
                 }
@@ -1379,7 +1400,7 @@ app.put("/groups", async (req, res) => {
                     queryResult = await client.query(queryText, queryValues);
 
                     if(!queryResult.rowCount){
-                        console.log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
+                        server_Log(`Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`);
                         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                         return res.status(404).json({error: `Bad Request: ${deviceNames[nameIndex]} with ID: ${deviceIDs[nameIndex][idIndex]} cannot be added to a group`});
                     }
@@ -1393,27 +1414,27 @@ app.put("/groups", async (req, res) => {
         // Step 4: Edit the group's details in the database
         for(let index = 0; index < Object.keys(data).length; index++){
             queryText = format('UPDATE groups SET %I = %s WHERE id = %L;', `${Object.keys(data)[index]}_ids`, Object.values(data)[index], id);
-            console.log(queryText);
+            server_Log(queryText);
 
             await client.query(queryText, (err) => {
                 if(err){
-                    console.log(err);
-                    console.log(`ERROR: Bad arguments in PUT request`);
+                    server_Log(err);
+                    server_Log(`ERROR: Bad arguments in PUT request`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(400).json({error: `Bad arguments in PUT request`})
                 }
             })
         }
 
-        console.log(`Successfully edited members of group with ID: ${id}`);
-        if(apollo_air_1_ids){console.log(` - Apollo AIR-1's: ${apollo_air_1_ids}`);}
-        if(apollo_msr_2_ids){console.log(` - Apollo MSR-2's: ${apollo_msr_2_ids}`);}
-        if(athom_smart_plug_v2_ids){console.log(` - Athom Smart Plug v2's: ${athom_smart_plug_v2_ids}`);}
-        if(zigbee2mqtt_ids){console.log(` - Zigbee2MQTT's: ${zigbee2mqtt_ids}`);}
+        server_Log(`Successfully edited members of group with ID: ${id}`);
+        if(apollo_air_1_ids){server_Log(` - Apollo AIR-1's: ${apollo_air_1_ids}`);}
+        if(apollo_msr_2_ids){server_Log(` - Apollo MSR-2's: ${apollo_msr_2_ids}`);}
+        if(athom_smart_plug_v2_ids){server_Log(` - Athom Smart Plug v2's: ${athom_smart_plug_v2_ids}`);}
+        if(zigbee2mqtt_ids){server_Log(` - Zigbee2MQTT's: ${zigbee2mqtt_ids}`);}
         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
         return res.status(200).send(`Successfully edited members of group with ID: ${id}`);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -1434,7 +1455,7 @@ app.delete("/groups", async (req, res) => {
         let queryResult = await client.query(queryText, queryValues);
 
         if(!queryResult.rows.length){
-            console.log(`Not Found: Group with ID: ${id} does not exist`);
+            server_Log(`Not Found: Group with ID: ${id} does not exist`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
             return res.status(404).json({error: `Not Found: Group with ID: ${id} does not exist`});
         }
@@ -1444,12 +1465,12 @@ app.delete("/groups", async (req, res) => {
         queryValues = [id];
 
         await client.query(queryText, queryValues, () => {
-            console.log(`Successfully deleted group with ID: ${id}`);
+            server_Log(`Successfully deleted group with ID: ${id}`);
             UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
             return res.status(200).send(`Successfully deleted group with ID: ${id}`);
         });
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
@@ -1471,7 +1492,7 @@ app.get("/groups/:id", async (req, res) => {
 
             client.query(queryText, queryValues, (err, queryResult) => {
                 if(!queryResult.rows.length){
-                    console.log(`Not Found: Group with ID: ${id} does not exist`);
+                    server_Log(`Not Found: Group with ID: ${id} does not exist`);
                     UPDATE_transactions(specific_api_key, req.method, req.originalUrl, false);
                     return res.status(404).json({error: `Not Found: Group with ID: ${id} does not exist`});
                 }
@@ -1501,11 +1522,11 @@ app.get("/groups/:id", async (req, res) => {
         }
 
         // Step 3: Pass the data to the GET request
-        console.log(`Successfully returned most recent data for all devices in the group with id: ${id}`);
+        server_Log(`Successfully returned most recent data for all devices in the group with id: ${id}`);
         UPDATE_transactions(specific_api_key, req.method, req.originalUrl, true);
         res.json(groupData);
     }catch(err){
-        console.log(`Internal Server Error: An unexpected error occurred\n${err}`);
+        server_Log(`Internal Server Error: An unexpected error occurred\n${err}`);
         return res.status(500).json({error: `Internal Server Error: An unexpected error occurred`});
     }
 })
